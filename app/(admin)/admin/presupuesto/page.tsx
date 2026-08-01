@@ -1,0 +1,6 @@
+import { PlaceholderPage } from "@/components/layout/PlaceholderPage";
+import { es } from "@/i18n";
+
+export default function AdminBudgetPage() {
+  return <PlaceholderPage title={es.nav.budget} />;
+}

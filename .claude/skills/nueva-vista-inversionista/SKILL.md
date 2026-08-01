@@ -5,7 +5,7 @@ description: Procedimiento para construir una pantalla nueva del portal del inve
 
 # Construir una vista del inversionista
 
-Toda pantalla del inversionista comparte el mismo andamiaje. Seguir este patrón mantiene el código consistente y evita olvidar piezas críticas como la verificación de rol o el estado vacío.
+Toda pantalla del inversionista comparte el mismo andamiaje. Seguir este patrón mantiene el código consistente y evita olvidar piezas críticas como la verificación de capacidad o el estado vacío.
 
 ## Antes de empezar
 Lee en `.claude/docs/views.md` la descripción de la vista específica (qué bloques lleva, qué datos muestra) y en `.claude/docs/code-patterns.md` las convenciones. No agregues bloques que no estén documentados para esa vista — si crees que falta algo, proponlo, no lo des por incluido (regla de alcance del proyecto).
@@ -34,7 +34,7 @@ Toda vista con datos define explícitamente:
 - **Dato en cero** se muestra en cero, no se oculta (un KPI de $0 es información válida).
 
 ### 5. Seguridad
-- La ruta ya está protegida por rol/estado en `proxy.ts`, pero la página igual verifica que el usuario tenga derecho a lo que pide.
+- La ruta ya está protegida en `proxy.ts` por capacidad (vínculo de inversionista para las vistas del inversionista; `role = 'admin'` para el panel) y por estado, pero la página igual verifica que el usuario tenga derecho a lo que pide.
 - Jamás consultar ni mostrar datos de otro inversionista. Si la vista muestra algo de un proyecto ajeno (catálogo), solo los campos públicos, nunca la inversión de otro.
 
 ## Textos

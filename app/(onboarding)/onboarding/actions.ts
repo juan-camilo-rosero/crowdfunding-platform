@@ -55,7 +55,20 @@ export async function completeBasicOnboarding(
     return { error: es.onboarding.saveError };
   }
 
-  // The role does NOT change here: promoting to investor is the admin's call
-  // when linking the person to a project (user-management.md).
-  redirect(homeRouteFor(profile.role));
+  // Capabilities do NOT change here: completing onboarding grants neither the
+  // investor link nor the admin role (user-management.md). This only reads them
+  // to pick the landing route.
+  const { data: investorLink } = await supabase
+    .from("investors")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1);
+
+  redirect(
+    homeRouteFor({
+      isAdmin: profile.role === "admin",
+      isInvestor: !!investorLink && investorLink.length > 0,
+      onboardingCompleted: true,
+    })
+  );
 }

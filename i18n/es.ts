@@ -54,4 +54,30 @@ export const es = {
     title: "Portafolio Investors 180",
     placeholder: "Pantalla temporal. Aquí va el catálogo de proyectos del grupo.",
   },
+
+  nav: {
+    investorSection: "Mi inversión",
+    adminSection: "Administración",
+    home: "Inicio",
+    catalog: "Portafolio",
+    myInvestments: "Mis inversiones",
+    transactions: "Transacciones",
+    documents: "Documentos",
+    requests: "Solicitudes",
+    profile: "Perfil",
+    adminHome: "Panel",
+    projects: "Proyectos",
+    investors: "Inversionistas",
+    capital: "Capital",
+    budget: "Presupuesto",
+    tasks: "Tareas",
+    reports: "Reportes",
+    users: "Usuarios",
+    pipeline: "Pipeline",
+    approvals: "Aprobaciones",
+  },
+
+  placeholder: {
+    notice: "Pantalla pendiente de construcción.",
+  },
 } as const;

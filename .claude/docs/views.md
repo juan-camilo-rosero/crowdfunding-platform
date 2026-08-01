@@ -6,7 +6,7 @@
 app/
 ├── (auth)/login, callback
 ├── (onboarding)/onboarding
-├── (investor)/            # layout con sidebar de inversionista
+├── (investor)/            # requiere VÍNCULO de inversionista (salvo catálogo y perfil)
 │   ├── inicio
 │   ├── portafolio         # catálogo "Portafolio Investors 180"
 │   ├── mis-inversiones
@@ -15,7 +15,7 @@ app/
 │   ├── documentos
 │   ├── solicitudes
 │   └── perfil
-├── (admin)/admin/         # layout admin, solo rol admin
+├── (admin)/admin/         # requiere role = 'admin'; /admin es su landing
 │   ├── proyectos, inversionistas, capital, presupuesto, tareas,
 │   ├── reportes, documentos, usuarios, pipeline, aprobaciones
 └── api/
@@ -26,23 +26,38 @@ app/
 
 Carpetas y rutas en español (coinciden con la UI). La protección de rutas va en `proxy.ts` en la raíz (Next.js 16 renombró `middleware.ts` a `proxy.ts`).
 
+## Sidebar y navegación — se arma por CAPACIDADES
+
+El menú NO se construye a partir de un rol único, sino sumando capacidades independientes (ver user-management.md):
+
+- **Sección de inversionista** (inicio, portafolio, mis-inversiones, transacciones, documentos, solicitudes, perfil): visible si la persona **tiene vínculo** en `investors`.
+- **Sección de admin** (proyectos, inversionistas, capital, presupuesto, tareas, reportes, documentos, usuarios, pipeline, aprobaciones): visible si `users.role = 'admin'`.
+- **La dueña (admin + con vínculo) ve LAS DOS secciones** en el mismo sidebar.
+- Un admin sin inversión ve la sección admin más el catálogo y su perfil, sin las pestañas de inversionista.
+- Un usuario común con inversión ve solo la sección de inversionista.
+- Un usuario sin vínculo y sin admin ve solo catálogo y perfil.
+
+Las pestañas de admin se OCULTAN por completo para quien no es admin (no se muestran deshabilitadas). Lo mismo con las de inversionista para quien no tiene vínculo.
+
 ## Autenticación (/login)
 Sign in/up unificado: botones "Continuar con Google" y "Continuar con Outlook" (OAuth vía Supabase). Carrusel lateral de 4 slides con features, SIN cifras ni promesas de retorno. Tras login, `proxy.ts` decide el destino:
 
-| `onboarding_completed` | Rol | Destino |
+| `onboarding_completed` | Capacidades | Destino |
 |---|---|---|
 | false | cualquiera | `/onboarding` (onboarding básico) |
-| true | visitante | `/portafolio` (catálogo público) |
-| true | inversionista | `/inicio` |
-| true | admin | `/inicio` |
+| true | con vínculo de inversionista (sea admin o no) | `/inicio` |
+| true | admin sin vínculo | `/admin` (landing del panel) |
+| true | sin vínculo y sin admin | `/portafolio` (catálogo público) |
+
+El vínculo de inversionista tiene prioridad sobre el admin al elegir la landing: la dueña entra a `/inicio` y salta al panel desde el sidebar.
 
 ## Onboarding (/onboarding) — BÁSICO
 
 IMPORTANTE: el onboarding es por capas. Esta pantalla es solo el **onboarding básico**, que hace TODO usuario recién registrado, sin importar su rol.
 
-Solo la primera vez. Pide únicamente **datos personales**: nombre completo, teléfono (E.164) y ciudad/país. NO incluye verificación de identidad ni firma de contrato. Checklist de estado visible. Al completar, `onboarding_completed = true` y el usuario queda como `visitante` con acceso al catálogo público (`/portafolio`) y su perfil.
+Solo la primera vez. Pide únicamente **datos personales**: nombre completo, teléfono (E.164) y ciudad/país. NO incluye verificación de identidad ni firma de contrato. Checklist de estado visible. Al completar, `onboarding_completed = true` y el usuario accede al catálogo público (`/portafolio`) y su perfil.
 
-El paso a `inversionista` NO ocurre aquí: lo hace el admin al vincular a la persona con un proyecto (Camino B en user-management.md).
+Completar el onboarding NO otorga la capacidad de inversionista ni cambia `role`: ser inversionista requiere que el admin cree/conecte su fila en `investors` (Camino B en user-management.md).
 
 ## Onboarding de inversión (sprint de integraciones, aún no construido)
 
@@ -100,8 +115,11 @@ Título: "Me interesa este proyecto". Campos: monto (opcional), tipo de inversi�
 Burbuja/panel en el layout de inversionista. Ver integrations.md para su funcionamiento. No tiene historial persistente.
 
 ## Panel admin (/admin/*)
+
+Requiere `role = 'admin'`; tener inversiones no da acceso. `/admin` es la **landing del panel**: resumen de entrada y punto de aterrizaje de un admin sin vínculo de inversionista.
+
 CRUD de las tablas base. Además:
-- **usuarios:** vincular inversionista a proyectos, cambiar estado/rol, corregir email de vínculo.
+- **usuarios:** vincular/desvincular a alguien como inversionista (crear o conectar su fila en `investors`), ascender o quitar `role = 'admin'` (acción aparte del vínculo), cambiar el estado de la cuenta, corregir el email de vínculo. Las dos capacidades se gestionan por separado: quitar el vínculo no quita el admin, y viceversa.
 - **pipeline:** tabla del embudo de captación — nombre del inversionista, teléfono, monto potencial, etapa, acción "cambiar estado". Las etapas alimentan la métrica de capital potencial por etapa (embudo: contacto, calificado, en reunión, en revisión, firmado, desembolsado).
 - **aprobaciones:** cola de reassignment_requests e investment_interests pendientes.
 

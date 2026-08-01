@@ -59,10 +59,18 @@ Strings de UI centralizados en `i18n/` para permitir internacionalización futur
 
 ## Roles y seguridad
 
-Tres roles: `visitante` (solo catálogo), `inversionista` (ve solo lo suyo), `admin` (acceso total).
+**Modelo de capacidades, no de roles excluyentes.** "Ser admin" y "ser inversionista" son capacidades independientes que pueden coexistir en la misma cuenta (caso real: la dueña gestiona el negocio y además invirtió en él).
 
-- IMPORTANTE: un inversionista JAMÁS ve datos de otro. Se garantiza con Row Level Security en Supabase (filtrado por `auth.uid()`), no solo ocultando en la UI.
-- Toda consulta de datos privados verifica identidad + rol + propiedad del dato en el servidor. La protección de rutas por rol/estado va en `proxy.ts` (Next.js 16).
+- `users.role` representa SOLO el nivel administrativo: `visitante` (usuario común) o `admin`. Ya no se asigna `inversionista` como valor de `role`.
+- **Se es inversionista si existe una fila en `investors` vinculada al `user_id`.** Es una capacidad DERIVADA del vínculo, no del rol — el mismo criterio que ya usan las políticas RLS.
+- El sidebar y los permisos se arman sumando capacidades: sección de inversionista si hay vínculo, sección de admin si `role = 'admin'`, ambas para la dueña.
+- Rutas de inversionista (`/inicio`, `/mis-inversiones`, `/transacciones`…) exigen vínculo; `/admin/*` exige `role = 'admin'`.
+
+Reglas de seguridad (sin cambios):
+- IMPORTANTE: un inversionista JAMÁS ve datos de otro. Se garantiza con Row Level Security en Supabase (filtrado por `auth.uid()`), no solo ocultando en la UI. Ser admin no relaja esto: sus datos propios los ve en `/inicio` y los de todos solo en `/admin/*`.
+- Toda consulta de datos privados verifica identidad + capacidades + propiedad del dato en el servidor. La protección de rutas va en `proxy.ts` (Next.js 16).
+
+Detalle completo de las cuatro combinaciones: `.claude/docs/user-management.md`.
 
 ## Reglas de negocio críticas
 

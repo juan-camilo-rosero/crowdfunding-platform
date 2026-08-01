@@ -20,15 +20,19 @@ Comprueba que cada transición válida funciona y cada prohibida se bloquea:
 Cada transición prohibida debe devolver error, no fallar en silencio.
 
 ## Nivel 2 — Matriz de permisos (lo más crítico)
-Por cada rol, comprueba lo que puede y lo que no. Las pruebas que no pueden fallar:
+
+Se prueba por **capacidades**, no por rol único (ver user-management.md). Las cuatro combinaciones a cubrir: sin vínculo/no admin · con vínculo/no admin · admin sin vínculo · admin con vínculo (la dueña).
+
+Las pruebas que no pueden fallar:
 - Un inversionista A NO puede ver transacciones, documentos ni datos de un inversionista B. Probar de tres formas:
   1. Desde la navegación normal (no debe existir la opción).
   2. Pegando la URL directa del recurso ajeno (el backend debe negar).
   3. Llamando directo a la consulta/endpoint (RLS debe bloquear).
-- Un visitante no accede a ninguna pantalla privada por URL directa.
-- Un inversionista no accede al panel admin por URL directa.
+- Alguien sin vínculo de inversionista no accede a rutas de inversionista (`/inicio`, `/mis-inversiones`, `/transacciones`…) por URL directa, **aunque sea admin**.
+- Alguien sin `role = 'admin'` no accede al panel admin por URL directa, **aunque tenga inversiones**.
+- La dueña (admin + con vínculo) accede a ambas secciones, y en `/inicio` sigue viendo SOLO sus propias inversiones.
 - Un inversionista no aprueba sus propias solicitudes.
-- El admin sí ve todo.
+- El admin ve los datos de todos únicamente a través de `/admin/*`.
 
 ## Nivel 3 — Casos borde
 - Mismo email en Google y Outlook = una sola cuenta, no duplicada.

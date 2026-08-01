@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { AuthErrorCode } from "@/lib/auth/auth-errors";
-import { ONBOARDING_ROUTE, homeRouteFor } from "@/lib/auth/routes";
+import { homeRouteFor } from "@/lib/auth/routes";
 import { isRole } from "@/types/user";
 
 /**
@@ -71,9 +71,19 @@ export async function GET(request: NextRequest) {
     return backToLogin("account-deactivated");
   }
 
-  // Basic onboarding pending -> any role goes through it. Already done -> the
-  // role's home: visitors to the catalog, investors/admins to /inicio.
+  // Investor capability is derived from the link, never from role. The explicit
+  // user_id filter matters: RLS lets an admin read every investors row.
+  const { data: investorLink } = await supabase
+    .from("investors")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1);
+
   return redirectTo(
-    profile.onboarding_completed ? homeRouteFor(profile.role) : ONBOARDING_ROUTE
+    homeRouteFor({
+      isAdmin: profile.role === "admin",
+      isInvestor: !!investorLink && investorLink.length > 0,
+      onboardingCompleted: profile.onboarding_completed,
+    })
   );
 }

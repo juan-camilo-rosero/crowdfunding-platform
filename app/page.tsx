@@ -1,15 +1,16 @@
 import { redirect } from "next/navigation";
-import { LOGIN_ROUTE, ONBOARDING_ROUTE, homeRouteFor } from "@/lib/auth/routes";
-import { getCurrentUser, getCurrentUserProfile } from "@/lib/auth/session";
+import { LOGIN_ROUTE, homeRouteFor } from "@/lib/auth/routes";
+import { getCapabilities, getCurrentUser } from "@/lib/auth/session";
 
 /**
  * MOUNT POINT FOR THE PUBLIC LANDING PAGE (future).
  *
  * Today this route renders nothing: it only decides where to send the user.
- *   - no session                     -> /login
- *   - basic onboarding pending       -> /onboarding  (any role)
- *   - onboarded visitor              -> /portafolio
- *   - onboarded investor/admin       -> /inicio
+ *   - no session                       -> /login
+ *   - basic onboarding pending         -> /onboarding  (everyone)
+ *   - has investor link                -> /inicio
+ *   - admin without investor link      -> /admin
+ *   - neither                          -> /portafolio
  *
  * Once the fundraising landing exists, this file renders it and the redirect
  * logic moves to the "Sign in" button (or stays only for authenticated users).
@@ -22,13 +23,11 @@ export default async function Page() {
     redirect(LOGIN_ROUTE);
   }
 
-  const profile = await getCurrentUserProfile();
+  const capabilities = await getCapabilities();
 
-  if (!profile) {
+  if (!capabilities) {
     redirect(`${LOGIN_ROUTE}?error=profile-not-found`);
   }
 
-  redirect(
-    profile.onboarding_completed ? homeRouteFor(profile.role) : ONBOARDING_ROUTE
-  );
+  redirect(homeRouteFor(capabilities));
 }

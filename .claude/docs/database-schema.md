@@ -10,7 +10,7 @@ Todas las tablas llevan: `id uuid primary key default gen_random_uuid()`, `creat
 | full_name | text | |
 | phone | text | E.164 |
 | avatar_url | text | de Google/Outlook |
-| role | text enum | visitante · inversionista · admin |
+| role | text enum | Nivel administrativo: `visitante` · `admin`. El CHECK acepta además `inversionista` por compatibilidad histórica, pero **ya no se asigna**: ser inversionista se deriva de tener fila en `investors` con este `user_id` (ver user-management.md). |
 | status | text enum | invitado · registrado · activo · suspendido · desactivado |
 | onboarding_completed | boolean | default false |
 | identity_verified | boolean | default false (lo marca Truora) |

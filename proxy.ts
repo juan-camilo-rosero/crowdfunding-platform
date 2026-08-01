@@ -1,7 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { AuthErrorCode } from "@/lib/auth/auth-errors";
-import { CATALOG_ROUTE, ONBOARDING_ROUTE, homeRouteFor } from "@/lib/auth/routes";
+import {
+  ADMIN_HOME_ROUTE,
+  CATALOG_ROUTE,
+  ONBOARDING_ROUTE,
+  homeRouteFor,
+} from "@/lib/auth/routes";
 import { isRole, isUserStatus } from "@/types/user";
 
 // (auth) routes: no session required.
@@ -13,13 +18,14 @@ const PUBLIC_PATHS = ["/login", "/callback"];
 // redirector, tomorrow the public landing page. See app/page.tsx.
 const ROOT_PATH = "/";
 
-// (admin)/admin/*: admin role only.
-const ADMIN_PATH = "/admin";
+// (admin)/admin/*: requires role = 'admin'. Having investments grants nothing here.
+const ADMIN_PATH = ADMIN_HOME_ROUTE;
 
-// Public catalog + profile: visitors and investors have equal access.
+// Public catalog + profile: any authenticated, onboarded user.
 const CATALOG_PATHS = [CATALOG_ROUTE, "/proyecto", "/perfil"];
 
-// Investor-only routes (admins included); a visitor must not reach these.
+// Routes that require the INVESTOR capability (a linked row in `investors`),
+// not a role. An admin without investments has no data to show here.
 const INVESTOR_ONLY_PATHS = [
   "/inicio",
   "/mis-inversiones",
@@ -111,10 +117,38 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin("session-required");
   }
 
+  const isAdmin = role === "admin";
+
+  // Investor capability is derived from the link in `investors`. Resolved lazily
+  // so the extra query only runs on the requests that actually need it.
+  let investorLinkChecked = false;
+  let investorLinked = false;
+  const isInvestor = async () => {
+    if (!investorLinkChecked) {
+      // Explicit user_id filter is required: RLS lets an admin read every
+      // investors row, so without it every admin would look like an investor.
+      const { data } = await supabase
+        .from("investors")
+        .select("id")
+        .eq("user_id", user.id)
+        .limit(1);
+      investorLinked = !!data && data.length > 0;
+      investorLinkChecked = true;
+    }
+    return investorLinked;
+  };
+
+  const homeRoute = async () =>
+    homeRouteFor({
+      isAdmin,
+      isInvestor: await isInvestor(),
+      onboardingCompleted: profile.onboarding_completed,
+    });
+
   // -- Basic onboarding gate ------------------------------------------------
-  // Runs BEFORE the role checks: basic onboarding is done by EVERY authenticated
-  // user regardless of role (everyone starts as `visitante`). Blocking
-  // non-investors here left every new user without a valid destination.
+  // Runs BEFORE the capability checks: basic onboarding is done by EVERY
+  // authenticated user (everyone starts with no capabilities at all). Blocking
+  // anyone here left every new user without a valid destination.
   const isOnboardingRoute = isPathUnder(pathname, ONBOARDING_ROUTE);
 
   if (!profile.onboarding_completed) {
@@ -123,31 +157,23 @@ export async function proxy(request: NextRequest) {
 
   // Already onboarded: no reason to land back on that screen.
   if (isOnboardingRoute) {
-    return redirectTo(homeRouteFor(role));
+    return redirectTo(await homeRoute());
   }
   // -------------------------------------------------------------------------
 
+  // /admin/* requires the admin role; investments grant nothing here.
   if (isPathUnder(pathname, ADMIN_PATH)) {
-    if (role !== "admin") {
-      return redirectTo(homeRouteFor(role));
-    }
-    return response;
+    return isAdmin ? response : redirectTo(await homeRoute());
   }
 
-  // Admins see everything (permission matrix, user-management.md).
-  if (role === "admin") {
-    return response;
-  }
-
+  // Catalog and profile: open to any onboarded user.
   if (CATALOG_PATHS.some((p) => isPathUnder(pathname, p))) {
     return response;
   }
 
+  // Investor routes require the link, NOT the admin role.
   if (INVESTOR_ONLY_PATHS.some((p) => isPathUnder(pathname, p))) {
-    if (role !== "inversionista") {
-      return redirectTo(homeRouteFor(role));
-    }
-    return response;
+    return (await isInvestor()) ? response : redirectTo(await homeRoute());
   }
 
   return response;
