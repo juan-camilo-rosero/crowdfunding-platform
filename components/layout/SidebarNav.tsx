@@ -35,8 +35,10 @@ export function SidebarNav({
 }) {
   const pathname = usePathname();
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (item: NavItem) =>
+    item.exact
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   // The admin sees everything, so the investor section shows for them too even
   // without a link; a visitor with neither capability only gets the catalog.
@@ -50,7 +52,7 @@ export function SidebarNav({
       {items.map((item) => (
         <SidebarMenuItem key={item.href}>
           <SidebarMenuButton
-            isActive={isActive(item.href)}
+            isActive={isActive(item)}
             tooltip={item.label}
             render={<Link href={item.href} />}
             className={cn(

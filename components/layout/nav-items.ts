@@ -15,6 +15,8 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** When true, only an exact pathname match highlights this item. */
+  exact?: boolean;
 };
 
 /**
@@ -49,6 +51,6 @@ export const CATALOG_NAV_ITEM: NavItem = {
  * admin panel, not from here.
  */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { href: "/admin", label: es.nav.adminPanel, icon: DatabaseIcon },
+  { href: "/admin", label: es.nav.adminPanel, icon: DatabaseIcon, exact: true },
   { href: "/admin/pipeline", label: es.nav.salesFunnel, icon: FilterIcon },
 ];
