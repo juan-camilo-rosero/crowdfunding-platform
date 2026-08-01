@@ -2,40 +2,36 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, startTransition } from "react";
-import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
+import { CircleAlertIcon, CircleCheckIcon, ChevronDownIcon, FilterIcon } from "lucide-react";
 import { es } from "@/i18n";
-import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
+import { optionLabel, optionValue, type TableChanges, type TableColumn, type TableRow, type SelectOption } from "@/lib/table/types";
 import { Button } from "@/components/ui/button";
 import { EditableDataTable } from "@/components/data-table/EditableDataTable";
 import {
-  TableTabsSelector,
-  type TableTab,
-} from "@/components/data-table/TableTabsSelector";
-import { saveTableChanges } from "./actions";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { saveTableChanges } from "../actions";
 
 const NO_CHANGES: TableChanges = { updates: [], inserts: [] };
 
-export type AdminTablesPanelProps = {
-  tabs: TableTab[];
-  activeTabId: string;
+export type PipelinePanelProps = {
+  activeStatus: string;
+  statusOptions: readonly SelectOption[];
   columns: TableColumn[];
   rows: TableRow[];
   allowInsert: boolean;
 };
 
-/**
- * Interactive shell of the admin panel: table picker, grid and batch save.
- *
- * Changes accumulate here until "Guardar cambios" is pressed, and are then sent
- * in ONE call that either applies everything or nothing.
- */
-export function AdminTablesPanel({
-  tabs,
-  activeTabId,
+export function PipelinePanel({
+  activeStatus,
+  statusOptions,
   columns,
   rows,
   allowInsert,
-}: AdminTablesPanelProps) {
+}: PipelinePanelProps) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [changes, setChanges] = useState<TableChanges>(NO_CHANGES);
@@ -45,7 +41,6 @@ export function AdminTablesPanel({
   const pendingCount = changes.updates.length + changes.inserts.length;
   const hasChanges = pendingCount > 0;
 
-  // Warn before a full page unload (reload, close, external link).
   useEffect(() => {
     if (!hasChanges) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
@@ -53,44 +48,77 @@ export function AdminTablesPanel({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [hasChanges]);
 
-  function changeTab(tabId: string) {
-    // In-app navigation does not trigger beforeunload, so it is guarded here.
+  function changeStatus(newStatus: string) {
     if (hasChanges && !window.confirm(es.admin.discardConfirm)) return;
     setChanges(NO_CHANGES);
     setError(null);
-    router.push(`/admin?tabla=${tabId}`);
+    router.push(`/admin/pipeline?estado=${newStatus}`);
   }
 
   function save() {
     setError(null);
     startSaving(async () => {
-      const result = await saveTableChanges(activeTabId, changes);
+      // Inyectamos el estado actual a los nuevos registros creados si no lo llenaron
+      const changesWithStatus: TableChanges = {
+        updates: changes.updates,
+        inserts: changes.inserts.map((insert) => {
+          if (insert.status) return insert;
+          if (activeStatus !== "todos") return { ...insert, status: activeStatus };
+          return insert;
+        }),
+      };
+
+      const result = await saveTableChanges("inversionistas", changesWithStatus);
 
       if (!result.ok) {
-        // Pending changes are kept so the admin can fix and retry.
         setError(result.error);
         return;
       }
 
       startTransition(() => {
         setChanges(NO_CHANGES);
-        // Bumping this remounts the grid so it shows the persisted data.
         setSavedAt((count) => count + 1);
         router.refresh();
       });
     });
   }
 
+  const activeLabel = activeStatus === "todos"
+    ? "Todos los inversionistas"
+    : optionLabel(statusOptions.find(o => optionValue(o) === activeStatus) || activeStatus);
+
   return (
     <div className="flex flex-col gap-6">
-      <TableTabsSelector
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabChange={changeTab}
-      />
+      <div className="flex w-full items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="flex h-11.5 w-max min-w-48 cursor-pointer items-center justify-between gap-3 rounded-[10px] border border-line bg-elevated px-4 py-2 text-base font-normal text-ink-700 outline-none hover:bg-surface"
+          >
+            <div className="flex items-center gap-2">
+              <FilterIcon className="size-4 text-ink-500" aria-hidden="true" />
+              <span>{activeLabel}</span>
+            </div>
+            <ChevronDownIcon className="size-4 shrink-0 text-ink-500" aria-hidden="true" />
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => changeStatus("todos")}>
+              Todos los inversionistas
+            </DropdownMenuItem>
+            {statusOptions.map((opt) => (
+              <DropdownMenuItem
+                key={optionValue(opt)}
+                onClick={() => changeStatus(optionValue(opt))}
+              >
+                {optionLabel(opt)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <EditableDataTable
-        key={`${activeTabId}-${savedAt}`}
+        key={`${activeStatus}-${savedAt}`}
         columns={columns}
         rows={rows}
         onChangesChange={setChanges}

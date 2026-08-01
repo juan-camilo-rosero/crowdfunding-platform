@@ -85,7 +85,7 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     columns: [
       { key: "full_name", label: "Nombre completo", type: "text", width: 220, required: true },
       { key: "document_id", label: "Cédula", type: "text" },
-      { key: "phone", label: "Teléfono", type: "phone" },
+      { key: "phone", label: "Teléfono", type: "phone", width: 220 },
       { key: "email", label: "Correo", type: "email" },
       { key: "city_country", label: "Ciudad / País", type: "text" },
       { key: "potential_amount", label: "Monto potencial", type: "currency" },
