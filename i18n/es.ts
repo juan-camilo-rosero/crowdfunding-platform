@@ -126,6 +126,12 @@ export const es = {
       "Tienes cambios sin guardar. Si continúas se perderán. ¿Quieres salir de todos modos?",
   },
 
+  pipeline: {
+    // Filter that narrows the funnel by stage.
+    allStages: "Todas las etapas",
+    filterLabel: "Filtrar por etapa",
+  },
+
   // Server-side validation messages. `{campo}` is replaced with the column label.
   validation: {
     required: "El campo '{campo}' es obligatorio. Por favor complétalo para poder guardar.",
@@ -133,6 +139,7 @@ export const es = {
     invalidDate: "La fecha en '{campo}' no es válida. Asegúrate de seleccionarla correctamente.",
     invalidEmail: "El correo en '{campo}' no tiene un formato válido (ejemplo: usuario@correo.com).",
     invalidUrl: "El enlace en '{campo}' debe empezar con 'http://' o 'https://'.",
+    invalidPhone: "El teléfono en '{campo}' debe incluir el indicativo del país (ejemplo: +573001112233).",
     invalidOption: "Has seleccionado una opción en '{campo}' que no es válida. Por favor, elige una de la lista.",
     invalidBoolean: "El campo '{campo}' solo acepta opciones de sí o no.",
     negativeAmount: "El monto en '{campo}' no puede ser un número negativo.",

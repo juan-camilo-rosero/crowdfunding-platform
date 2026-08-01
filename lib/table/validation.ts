@@ -78,6 +78,13 @@ function validateValue(column: TableColumn, raw: string): string | null {
         ? null
         : message(es.validation.invalidBoolean, label);
 
+    case "phone":
+      // Storage format is E.164 (+57...), per CLAUDE.md. Spaces, dashes and
+      // parentheses are tolerated on input and stripped before checking.
+      return /^\+[1-9]\d{7,14}$/.test(value.replace(/[\s()-]/g, ""))
+        ? null
+        : message(es.validation.invalidPhone, label);
+
     case "select": {
       // The CHECK constraints in the schema are the source of truth; the
       // options list mirrors them.
