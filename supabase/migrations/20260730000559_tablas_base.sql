@@ -1,0 +1,60 @@
+create table public.users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text,
+  phone text,
+  avatar_url text,
+  role text not null default 'visitante' check (role in ('visitante','inversionista','admin')),
+  status text not null default 'registrado' check (status in ('invitado','registrado','activo','suspendido','desactivado')),
+  onboarding_completed boolean not null default false,
+  identity_verified boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table public.projects (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  company text check (company in ('Investors 180 Group','F1','F3','Otra LLC')),
+  address text,
+  city text check (city in ('Punta Gorda','Rotonda','North Port','Otra')),
+  type text check (type in ('lote','casa','triplex','multifamily')),
+  status text check (status in ('en evaluación','en reserva','permisos','construcción','vendido','rentado','pausado')),
+  lot_value numeric(14,2),
+  capital_required numeric(14,2),
+  estimated_sale_value numeric(14,2),
+  estimated_rent numeric(14,2),
+  progress integer default 0 check (progress between 0 and 100),
+  description text,
+  selling_points jsonb,
+  responsible text,
+  next_step text,
+  deadline date,
+  drive_folder_url text,
+  main_photos text[],
+  in_fundraising boolean not null default false,
+  fundraising_goal numeric(14,2),
+  lat numeric(9,6),
+  lng numeric(9,6),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create table public.investors (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id) on delete set null,
+  full_name text not null,
+  document_id text,
+  phone text,
+  email text,
+  city_country text,
+  potential_amount numeric(14,2),
+  pipeline_stage text check (pipeline_stage in ('contacto','calificado','en reunión','en revisión','firmado','desembolsado')),
+  investment_type_pref text check (investment_type_pref in ('deuda','equity','socio','préstamo','participación')),
+  first_contact_date date,
+  last_contact_date date,
+  status text check (status in ('prospecto','interesado','en revisión','comprometido','recibido','pausado')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
