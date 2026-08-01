@@ -1,25 +1,25 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { AuthErrorCode } from "@/lib/auth/auth-errors";
+import { CATALOG_ROUTE, ONBOARDING_ROUTE, homeRouteFor } from "@/lib/auth/routes";
 import { isRole, isUserStatus } from "@/types/user";
 
-// Rutas de (auth): no requieren sesión.
-// "/callback" DEBE ser pública: es donde se intercambia el `code` de Google por
-// sesión, y en ese momento el usuario todavía no tiene cookies de sesión.
+// (auth) routes: no session required.
+// "/callback" MUST be public: it is where Google's `code` is exchanged for a
+// session, and at that point the user has no session cookies yet.
 const PUBLIC_PATHS = ["/login", "/callback"];
 
-// "/" es pública y se maneja aparte (coincidencia exacta, no por prefijo):
-// hoy es un redirector y mañana será la landing pública. Ver app/page.tsx.
+// "/" is public and handled separately (exact match, not by prefix): today a
+// redirector, tomorrow the public landing page. See app/page.tsx.
 const ROOT_PATH = "/";
 
-// (admin)/admin/*: solo rol admin.
+// (admin)/admin/*: admin role only.
 const ADMIN_PATH = "/admin";
 
-// (onboarding)/onboarding: solo inversionista, ver nota en el bloque de abajo.
-const ONBOARDING_PATH = "/onboarding";
+// Public catalog + profile: visitors and investors have equal access.
+const CATALOG_PATHS = [CATALOG_ROUTE, "/proyecto", "/perfil"];
 
-// (investor)/*: catálogo público (accesible también para visitante) vs. resto (solo inversionista).
-const CATALOG_PATHS = ["/portafolio", "/proyecto", "/perfil"];
+// Investor-only routes (admins included); a visitor must not reach these.
 const INVESTOR_ONLY_PATHS = [
   "/inicio",
   "/mis-inversiones",
@@ -54,17 +54,19 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // No ejecutar lógica entre createServerClient() y auth.getUser(): getUser()
-  // es lo que realmente refresca la sesión y reescribe las cookies vía setAll.
+  // Do not run logic between createServerClient() and auth.getUser(): getUser()
+  // is what actually refreshes the session and rewrites cookies through setAll.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
-  const redirectToLogin = (codigo: AuthErrorCode) => {
+  const redirectTo = (path: string) =>
+    NextResponse.redirect(new URL(path, request.url));
+  const redirectToLogin = (code: AuthErrorCode) => {
     const url = new URL("/login", request.url);
-    url.searchParams.set("error", codigo);
+    url.searchParams.set("error", code);
     return NextResponse.redirect(url);
   };
 
@@ -73,73 +75,77 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!user) {
-    return redirectToLogin("sesion-requerida");
+    return redirectToLogin("session-required");
   }
 
-  // Segunda consulta (perfil): la autorización real vive en el backend y en RLS;
-  // este proxy es la primera barrera, no la única (ver code-patterns.md).
+  // Second query (profile): real authorization also lives in the backend and in
+  // RLS; this proxy is the first barrier, not the only one (see code-patterns.md).
   const { data: profile } = await supabase
     .from("users")
-    .select("role, status")
+    .select("role, status, onboarding_completed")
     .eq("id", user.id)
     .single();
 
-  const role = profile && isRole(profile.role) ? profile.role : null;
-  const status = profile && isUserStatus(profile.status) ? profile.status : null;
+  if (!profile) {
+    return redirectToLogin("profile-not-found");
+  }
+
+  const role = isRole(profile.role) ? profile.role : null;
+  const status = isUserStatus(profile.status) ? profile.status : null;
 
   if (!role || !status) {
-    return redirectToLogin("perfil-no-encontrado");
+    return redirectToLogin("profile-not-found");
   }
 
   if (status === "suspendido") {
-    return redirectToLogin("cuenta-suspendida");
+    return redirectToLogin("account-suspended");
   }
 
   if (status === "desactivado") {
-    return redirectToLogin("cuenta-desactivada");
+    return redirectToLogin("account-deactivated");
   }
 
   if (status === "invitado") {
-    // No debería ocurrir: invitado no tiene fila en auth.users hasta su primer login,
-    // momento en que pasa a "registrado". Se trata como no autorizado por seguridad.
-    return redirectToLogin("sesion-requerida");
+    // Should not happen: an invited user has no auth.users row until their first
+    // login, at which point they become "registrado". Denied here for safety.
+    return redirectToLogin("session-required");
   }
 
-  const isAdminRoute = isPathUnder(pathname, ADMIN_PATH);
-  const isOnboardingRoute = isPathUnder(pathname, ONBOARDING_PATH);
-  const isCatalogRoute = CATALOG_PATHS.some((p) => isPathUnder(pathname, p));
-  const isInvestorOnlyRoute = INVESTOR_ONLY_PATHS.some((p) => isPathUnder(pathname, p));
+  // -- Basic onboarding gate ------------------------------------------------
+  // Runs BEFORE the role checks: basic onboarding is done by EVERY authenticated
+  // user regardless of role (everyone starts as `visitante`). Blocking
+  // non-investors here left every new user without a valid destination.
+  const isOnboardingRoute = isPathUnder(pathname, ONBOARDING_ROUTE);
 
-  if (isAdminRoute) {
+  if (!profile.onboarding_completed) {
+    return isOnboardingRoute ? response : redirectTo(ONBOARDING_ROUTE);
+  }
+
+  // Already onboarded: no reason to land back on that screen.
+  if (isOnboardingRoute) {
+    return redirectTo(homeRouteFor(role));
+  }
+  // -------------------------------------------------------------------------
+
+  if (isPathUnder(pathname, ADMIN_PATH)) {
     if (role !== "admin") {
-      const homeUrl = new URL(role === "inversionista" ? "/inicio" : "/portafolio", request.url);
-      return NextResponse.redirect(homeUrl);
+      return redirectTo(homeRouteFor(role));
     }
     return response;
   }
 
-  // El admin ve todo (matriz de permisos, user-management.md): no se restringe más.
+  // Admins see everything (permission matrix, user-management.md).
   if (role === "admin") {
     return response;
   }
 
-  if (isOnboardingRoute) {
-    // Un visitante (registrado sin vincular) solo accede a catálogo + perfil,
-    // no a onboarding: eso es exclusivo de quien ya fue vinculado como inversionista.
-    if (role !== "inversionista") {
-      return NextResponse.redirect(new URL("/portafolio", request.url));
-    }
+  if (CATALOG_PATHS.some((p) => isPathUnder(pathname, p))) {
     return response;
   }
 
-  if (isCatalogRoute) {
-    // Catálogo público y perfil: visitante e inversionista acceden por igual.
-    return response;
-  }
-
-  if (isInvestorOnlyRoute) {
+  if (INVESTOR_ONLY_PATHS.some((p) => isPathUnder(pathname, p))) {
     if (role !== "inversionista") {
-      return NextResponse.redirect(new URL("/portafolio", request.url));
+      return redirectTo(homeRouteFor(role));
     }
     return response;
   }

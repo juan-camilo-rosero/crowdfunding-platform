@@ -12,10 +12,16 @@ proxy.ts      # protección de rutas por rol/estado (Next.js 16; antes middlewar
 ```
 
 ## Nomenclatura
-Solo las reglas que el linter/formatter no impone por sí mismo (las de casing estándar las aplica el tooling):
+
+**REGLA ABSOLUTA: el código va 100% en inglés** — variables, funciones, tipos, constantes, parámetros, nombres de archivo, componentes, comentarios y claves de `i18n/`. Nada de español en el código.
+
+Excepciones (solo lo que ve el usuario o ya es contrato externo):
+- **Valores** de los strings de UI en `i18n/`: español.
+- Rutas y carpetas de `app/`: español (`/mis-inversiones`), porque son URLs visibles.
+- Valores de enums almacenados en base: español.
+
+Resto de reglas que el linter/formatter no impone por sí mismo:
 - Tablas y columnas de base: snake_case en inglés.
-- Rutas y carpetas de `app/`: español (`/mis-inversiones`).
-- Enums en base y UI: español.
 - Componentes en PascalCase, el archivo coincide con el nombre del componente.
 
 ## Componentes
@@ -48,7 +54,7 @@ Solo las reglas que el linter/formatter no impone por sí mismo (las de casing e
 
 ## Seguridad (recordatorio, ver user-management.md)
 - Autorización verificada en el servidor en cada acción sensible: identidad + rol + propiedad del dato.
-- Rutas protegidas en `middleware.ts` por rol y estado del usuario.
+- Rutas protegidas en `proxy.ts` por rol y estado del usuario (incluido `onboarding_completed`).
 - El chatbot solo recibe contexto del usuario autenticado; jamás datos de otros.
 
 ## Gráficos (Recharts)

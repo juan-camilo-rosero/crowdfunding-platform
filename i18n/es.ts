@@ -1,45 +1,57 @@
 import type { AuthErrorCode } from "@/lib/auth/auth-errors";
 
+// Keys are in English (code); values are the Spanish text rendered to users.
 export const es = {
   app: {
-    nombre: "Investors 180",
-    descripcion: "Portal de inversionistas de Investors 180 Group.",
+    name: "Investors 180",
+    description: "Portal de inversionistas de Investors 180 Group.",
   },
 
   login: {
-    titulo: "Investors 180",
-    subtitulo: "Ingresa para consultar tus inversiones.",
-    continuarConGoogle: "Continuar con Google",
-    conectando: "Conectando…",
-    errores: {
-      "sesion-requerida": "Inicia sesión para continuar.",
-      "codigo-faltante": "No recibimos la respuesta de Google. Inténtalo de nuevo.",
-      "intercambio-fallido":
+    title: "Investors 180",
+    subtitle: "Ingresa para consultar tus inversiones.",
+    signInWithGoogle: "Continuar con Google",
+    connecting: "Conectando…",
+    errors: {
+      "session-required": "Inicia sesión para continuar.",
+      "missing-code": "No recibimos la respuesta de Google. Inténtalo de nuevo.",
+      "exchange-failed":
         "No pudimos completar el inicio de sesión. Inténtalo de nuevo.",
-      "proveedor-rechazado":
-        "Google no autorizó el acceso. Inténtalo de nuevo.",
-      "perfil-no-encontrado":
+      "provider-rejected": "Google no autorizó el acceso. Inténtalo de nuevo.",
+      "profile-not-found":
         "Tu cuenta se creó pero no encontramos tu perfil. Contacta al equipo de Investors 180.",
-      "cuenta-suspendida":
+      "account-suspended":
         "Tu cuenta está suspendida. Contacta al equipo de Investors 180.",
-      "cuenta-desactivada":
+      "account-deactivated":
         "Tu cuenta está desactivada. Contacta al equipo de Investors 180.",
     } satisfies Record<AuthErrorCode, string>,
   },
 
-  // Placeholders temporales del Sprint 1 (se reemplazan al construir las vistas reales).
-  inicio: {
-    titulo: "Inicio",
-    sesionIniciadaComo: "Sesión iniciada como",
-    rol: "Rol",
-    estado: "Estado",
+  // Temporary Sprint 1 placeholders (replaced when the real views are built).
+  home: {
+    title: "Inicio",
+    signedInAs: "Sesión iniciada como",
+    role: "Rol",
+    status: "Estado",
   },
 
   onboarding: {
-    titulo: "Onboarding",
-    estado: "Estado",
-    onboardingCompletado: "Onboarding completado",
-    si: "Sí",
+    title: "Onboarding",
+    status: "Estado",
+    onboardingCompleted: "Onboarding completado",
+    yes: "Sí",
     no: "No",
+    // Temporary Sprint 1 button: stands in for the real personal-data form
+    // (full name, phone, city/country) built later.
+    temporaryNotice:
+      "Pantalla temporal. El formulario de datos personales se construye en el sprint de onboarding básico.",
+    completeData: "Completar datos (temporal)",
+    saving: "Guardando…",
+    saveError: "No pudimos guardar tus datos. Inténtalo de nuevo.",
+  },
+
+  catalog: {
+    title: "Portafolio Investors 180",
+    placeholder: "Pantalla temporal. Aquí va el catálogo de proyectos del grupo.",
   },
 } as const;

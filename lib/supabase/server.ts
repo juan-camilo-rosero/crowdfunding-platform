@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
 /**
- * Cliente para Server Components, route handlers y Server Actions.
- * Crear una instancia nueva en cada request (nunca compartir entre requests).
+ * Client for Server Components, route handlers and Server Actions.
+ * Create a fresh instance per request (never share one across requests).
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -23,8 +23,8 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // setAll fue llamado desde un Server Component: se puede ignorar
-            // porque proxy.ts ya se encarga de refrescar la sesión.
+            // setAll was called from a Server Component: safe to ignore,
+            // proxy.ts already takes care of refreshing the session.
           }
         },
       },

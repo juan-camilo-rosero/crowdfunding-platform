@@ -1,5 +1,5 @@
-// timeZone: "UTC" evita el corrimiento de un día que produce new Date("YYYY-MM-DD")
-// al formatear en una zona horaria distinta a UTC (columnas `date` no llevan hora).
+// timeZone "UTC" prevents the off-by-one-day shift that new Date("YYYY-MM-DD")
+// produces when formatted in a non-UTC zone (`date` columns carry no time).
 const dateFormatter = new Intl.DateTimeFormat("es-CO", {
   day: "numeric",
   month: "short",
@@ -7,15 +7,15 @@ const dateFormatter = new Intl.DateTimeFormat("es-CO", {
   timeZone: "UTC",
 });
 
-/** Formato es-CO: "2025-03-27" -> "27 mar 2025". Vacío si no hay valor o es inválido. */
+/** es-CO format: "2025-03-27" -> "27 mar 2025". Empty when missing or invalid. */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return "";
 
   const date = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return "";
 
-  // formatToParts en vez de format(): el patrón es-CO de Intl agrega conectores
-  // ("27 de mar. de 2025"); se arma el string a mano para el formato pedido.
+  // formatToParts instead of format(): the es-CO pattern inserts connectors
+  // ("27 de mar. de 2025"), so the string is assembled manually.
   const parts = dateFormatter.formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((p) => p.type === type)?.value ?? "";

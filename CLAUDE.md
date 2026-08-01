@@ -2,6 +2,8 @@
 
 Portal web donde inversionistas (mayoría en Colombia) consultan la trazabilidad completa de sus inversiones en proyectos inmobiliarios en Florida: sus proyectos, aportes, condiciones, avance, documentos, transacciones y solicitudes. Incluye catálogo de proyectos que también sirve para captación, chatbot de asistencia, firma electrónica y onboarding con verificación de identidad.
 
+**Onboarding por capas:** al registrarse, cualquier usuario completa solo el onboarding BÁSICO (datos personales). La verificación de identidad (Truora) y la firma del contrato pertenecen al onboarding DE INVERSIÓN, que ocurre después, cuando el usuario va a invertir en un proyecto concreto o el admin lo vincula como inversionista. Detalle en `.claude/docs/views.md` y `.claude/docs/user-management.md`.
+
 **IMPORTANTE — Regla de alcance:** no se añade ninguna función que no esté documentada en este archivo ni en los de `.claude/docs/`. Features nuevas se proponen, no se dan por incluidas.
 
 ## Stack
@@ -41,10 +43,19 @@ pnpm typecheck      # tsc --noEmit
 
 ## Idioma
 
-- UI, textos y mensajes: 100% español.
+**REGLA ABSOLUTA — el código va 100% en inglés.** Sin excepciones:
+- Nombres de variables, funciones, tipos, constantes, parámetros, archivos y componentes: **inglés**.
+- Comentarios y JSDoc: **inglés**.
+- Claves de los objetos de `i18n/`: **inglés** (`signInWithGoogle`, no `continuarConGoogle`).
+- Nada de español en el código. Si dudas, va en inglés.
+
+Lo único que permanece en español es lo que **ve el usuario final** o lo que ya es un contrato externo:
+- **Valores** de los strings de UI en `i18n/` (el texto que se renderiza): 100% español.
+- Rutas y carpetas de `app/` (`/mis-inversiones`, `/portafolio`): español, porque son URLs visibles.
+- Valores de enums almacenados en base (`'en construcción'`, `'inversionista'`): español, definidos por las migraciones y la UI.
 - Nombres de tablas y columnas: inglés (estándar SQL).
-- Enums se almacenan en español (coinciden con la UI).
-- Strings de UI centralizados en `i18n/` para permitir internacionalización futura; hoy solo existe español.
+
+Strings de UI centralizados en `i18n/` para permitir internacionalización futura; hoy solo existe español.
 
 ## Roles y seguridad
 
@@ -78,6 +89,8 @@ Tres roles: `visitante` (solo catálogo), `inversionista` (ve solo lo suyo), `ad
 
 ## Orden de construcción
 
-0. Setup + esquema SQL + RLS → 1. Auth + roles/estados + middleware → 2. Panel admin CRUD → 3. Catálogo y detalle de proyecto → 4. Home (KPIs, dona, feed) → 5. Transacciones y solicitudes → 6. Documentos y notificaciones → 7. Onboarding + Truora → 8. Firma electrónica → 9. Catálogo como captación + pipeline admin → 10. Chatbot.
+0. Setup + esquema SQL + RLS → 1. Auth + roles/estados + `proxy.ts` + onboarding básico → 2. Panel admin CRUD → 3. Catálogo y detalle de proyecto → 4. Home (KPIs, dona, feed) → 5. Transacciones y solicitudes → 6. Documentos y notificaciones → 7. Onboarding de inversión + Truora → 8. Firma electrónica → 9. Catálogo como captación + pipeline admin → 10. Chatbot.
+
+El onboarding básico (datos personales) es parte de la etapa 1, junto con el login. Truora y la firma llegan en las etapas 7 y 8, dentro del onboarding de inversión.
 
 Cada etapa debe quedar demostrable antes de pasar a la siguiente.

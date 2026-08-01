@@ -1,5 +1,7 @@
 import type { Database } from "./database";
 
+// Enum values stay in Spanish: they are stored that way in the database
+// (text + check constraints) and shown as-is in the UI.
 export const ROLES = ["visitante", "inversionista", "admin"] as const;
 export type Role = (typeof ROLES)[number];
 

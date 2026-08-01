@@ -22,6 +22,26 @@ No crear roles intermedios sin necesidad real.
 | suspendido | Bloqueado temporalmente por admin | No |
 | desactivado | Baja; datos conservados, sin acceso | No |
 
+## Rol + onboarding_completed: qué ve y qué hace cada combinación
+
+El onboarding es **por capas** (ver views.md). `onboarding_completed` se refiere SOLO al onboarding básico (datos personales: nombre, teléfono, ciudad/país). NO implica verificación de identidad ni contrato firmado; esos pertenecen al onboarding de inversión, que ocurre después.
+
+| Rol | `onboarding_completed` | Destino tras login | A qué accede |
+|---|---|---|---|
+| visitante | false | `/onboarding` | Solo el onboarding básico. Cualquier otra ruta privada lo devuelve ahí. |
+| visitante | true | `/portafolio` | Catálogo público (`/portafolio`, `/proyecto/[id]`) y su perfil (`/perfil`). NADA más. |
+| inversionista | false | `/onboarding` | Solo el onboarding básico. |
+| inversionista | true | `/inicio` | Todo lo suyo: inicio, portafolio, mis-inversiones, transacciones, documentos, solicitudes, perfil. |
+| admin | false | `/onboarding` | Solo el onboarding básico. |
+| admin | true | `/inicio` | Acceso total, incluido `/admin/*`. |
+
+Reglas que se derivan de la tabla y que NO deben romperse:
+
+- **Un visitante SÍ hace el onboarding básico.** `/onboarding` está abierto a cualquier rol autenticado con `onboarding_completed = false`. Bloquear a los no-inversionistas de esa ruta deja a todo usuario nuevo sin destino válido (todos nacen `visitante`).
+- **Un visitante con onboarding completo NO entra a rutas de inversionista** (`/inicio`, `/mis-inversiones`, `/transacciones`, `/documentos`, `/solicitudes`) ni a `/admin/*`.
+- **El paso visitante → inversionista lo hace SOLO el admin** al vincular a la persona con un proyecto. Nadie se autoasciende completando el onboarding.
+- Un usuario con `onboarding_completed = false` que pida cualquier ruta privada se devuelve a `/onboarding`, no a `/login` (ya tiene sesión válida).
+
 ### Transiciones válidas
 invitado→registrado (primera entrada) · registrado→activo (admin vincula) · activo→suspendido · suspendido→activo · activo→desactivado · desactivado→activo (readmisión, conserva historial).
 
@@ -31,9 +51,11 @@ invitado→registrado (primera entrada) · registrado→activo (admin vincula) �
 - desactivado NO ve datos aunque tenga enlace directo.
 
 ## Flujo de vinculación
-**Camino A (admin invita primero):** admin crea el registro del inversionista → email marcado "invitado" → persona entra con OAuth con ese email → pasa a activo, ya vinculada.
+**Camino A (admin invita primero):** admin crea el registro del inversionista → email marcado "invitado" → persona entra con OAuth con ese email → hace el onboarding básico → pasa a activo, ya vinculada.
 
-**Camino B (persona se registra sola):** entra con OAuth sin invitación → queda "registrado" (solo catálogo) → admin la ve en "usuarios sin vincular" → al vincularla pasa a activo.
+**Camino B (persona se registra sola):** entra con OAuth sin invitación → queda "registrado" con rol `visitante` → hace el onboarding básico (`onboarding_completed = true`) → navega el catálogo público → admin la ve en "usuarios sin vincular" → al vincularla pasa a activo con rol `inversionista`.
+
+En ambos caminos el onboarding básico es solo datos personales. La verificación de identidad y la firma del contrato llegan después, en el onboarding de inversión.
 
 **Regla de oro:** el vínculo persona↔inversionista se hace por email verificado. Si el admin escribió un email distinto al que usa la persona para entrar, no hay match; el admin debe poder corregir el email o vincular manualmente.
 

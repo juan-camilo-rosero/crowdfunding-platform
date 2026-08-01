@@ -3,7 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { isRole, isUserStatus, type Role, type UserProfile } from "@/types/user";
 
-/** Usuario autenticado según Supabase Auth, o null. Memoizado por request. */
+/** Authenticated user per Supabase Auth, or null. Memoized per request. */
 export const getCurrentUser = cache(async (): Promise<User | null> => {
   const supabase = await createClient();
   const {
@@ -16,8 +16,8 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
 });
 
 /**
- * Fila de public.users del usuario autenticado. RLS ya restringe a la propia
- * fila (o admin); se filtra también por id de forma explícita como segunda barrera.
+ * The authenticated user's public.users row. RLS already restricts this to the
+ * caller's own row (or admin); the explicit id filter is a second barrier.
  */
 export const getCurrentUserProfile = cache(async (): Promise<UserProfile | null> => {
   const user = await getCurrentUser();

@@ -1,38 +1,39 @@
 import { redirect } from "next/navigation";
 import { es } from "@/i18n";
+import { LOGIN_ROUTE } from "@/lib/auth/routes";
 import { getCurrentUser, getCurrentUserProfile } from "@/lib/auth/session";
 
 /**
- * PLACEHOLDER temporal del Sprint 1: solo confirma que la sesión funciona.
- * La Home real (KPIs, dona, feed de actividad — ver views.md) se construye después.
+ * TEMPORARY Sprint 1 placeholder: only confirms the session works.
+ * The real home (KPIs, donut chart, activity feed — see views.md) comes later.
  */
-export default async function InicioPage() {
+export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect("/login?error=sesion-requerida");
+    redirect(`${LOGIN_ROUTE}?error=session-required`);
   }
 
   const profile = await getCurrentUserProfile();
   if (!profile) {
-    redirect("/login?error=perfil-no-encontrado");
+    redirect(`${LOGIN_ROUTE}?error=profile-not-found`);
   }
 
   return (
     <main className="flex flex-1 flex-col gap-3 p-8">
-      <h1 className="text-xl font-semibold">{es.inicio.titulo}</h1>
+      <h1 className="text-xl font-semibold">{es.home.title}</h1>
       <dl className="flex flex-col gap-1 text-sm">
         <div className="flex gap-2">
           <dt className="text-black/60 dark:text-white/60">
-            {es.inicio.sesionIniciadaComo}:
+            {es.home.signedInAs}:
           </dt>
           <dd>{profile.email}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="text-black/60 dark:text-white/60">{es.inicio.rol}:</dt>
+          <dt className="text-black/60 dark:text-white/60">{es.home.role}:</dt>
           <dd>{profile.role}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="text-black/60 dark:text-white/60">{es.inicio.estado}:</dt>
+          <dt className="text-black/60 dark:text-white/60">{es.home.status}:</dt>
           <dd>{profile.status}</dd>
         </div>
       </dl>

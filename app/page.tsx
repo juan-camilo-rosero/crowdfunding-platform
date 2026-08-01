@@ -1,30 +1,34 @@
 import { redirect } from "next/navigation";
+import { LOGIN_ROUTE, ONBOARDING_ROUTE, homeRouteFor } from "@/lib/auth/routes";
 import { getCurrentUser, getCurrentUserProfile } from "@/lib/auth/session";
 
 /**
- * PUNTO DE MONTAJE DE LA LANDING PÚBLICA (futuro).
+ * MOUNT POINT FOR THE PUBLIC LANDING PAGE (future).
  *
- * Hoy esta ruta NO renderiza nada: solo decide a dónde mandar al usuario.
- *   · sin sesión            → /login
- *   · onboarding pendiente  → /onboarding
- *   · sesión completa       → /inicio
+ * Today this route renders nothing: it only decides where to send the user.
+ *   - no session                     -> /login
+ *   - basic onboarding pending       -> /onboarding  (any role)
+ *   - onboarded visitor              -> /portafolio
+ *   - onboarded investor/admin       -> /inicio
  *
- * Cuando exista la landing de captación, este archivo pasa a renderizarla y la
- * lógica de redirección se mueve al botón de "Ingresar" (o se conserva solo para
- * usuarios ya autenticados). `proxy.ts` deja "/" pública precisamente para eso.
+ * Once the fundraising landing exists, this file renders it and the redirect
+ * logic moves to the "Sign in" button (or stays only for authenticated users).
+ * proxy.ts keeps "/" public precisely for that.
  */
 export default async function Page() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect(LOGIN_ROUTE);
   }
 
   const profile = await getCurrentUserProfile();
 
   if (!profile) {
-    redirect("/login?error=perfil-no-encontrado");
+    redirect(`${LOGIN_ROUTE}?error=profile-not-found`);
   }
 
-  redirect(profile.onboarding_completed ? "/inicio" : "/onboarding");
+  redirect(
+    profile.onboarding_completed ? homeRouteFor(profile.role) : ONBOARDING_ROUTE
+  );
 }

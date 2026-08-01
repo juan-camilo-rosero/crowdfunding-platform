@@ -1,3 +1,3 @@
-// Hoy solo existe español. Cuando se agregue otro idioma, aquí se resuelve el
-// locale activo; los componentes seguirán importando desde "@/i18n".
+// Spanish is the only locale today. When another one is added, the active
+// locale is resolved here; components keep importing from "@/i18n".
 export { es } from "./es";

@@ -2,7 +2,9 @@
 
 ## Truora — verificación de identidad
 
-Se usa en el onboarding. Truora recomienda EXPLÍCITAMENTE usar su Web Integration y evitar los endpoints directos de la API salvo que sea absolutamente necesario. Por eso el flujo es por token web, no llamadas directas a validadores. Modelo:
+Se usa en el **onboarding de inversión**, NO en el registro inicial. El onboarding básico (datos personales, al registrarse) no incluye verificación de identidad; Truora entra cuando el usuario va a invertir en un proyecto concreto o cuando el admin lo vincula como inversionista (ver views.md y user-management.md).
+
+Truora recomienda EXPLÍCITAMENTE usar su Web Integration y evitar los endpoints directos de la API salvo que sea absolutamente necesario. Por eso el flujo es por token web, no llamadas directas a validadores. Modelo:
 
 1. El backend (`/api/truora/start`) genera un token de integración web por usuario contra la API de Truora, usando `TRUORA_API_KEY` y `TRUORA_ACCOUNT_ID`. Cada usuario y cada proceso requieren un token distinto. El `account_id` debe seguir el patrón `[a-zA-Z0-9_.-]+`.
 2. Se redirige al usuario al flujo web de Truora (URL con el token). El flujo hace Document ID (validación del documento) + Face Match (comparación facial).
@@ -16,7 +18,7 @@ Notas:
 
 ## Firma electrónica
 
-Contrato de inversión firmado dentro del onboarding. Proveedor base: Documenso (open source, autohospedable); conmutable a proveedor comercial vía `ESIGN_PROVIDER_URL` / `ESIGN_API_KEY`. El estado de firma se recibe por `/api/esign/webhook`. Validez legal en Colombia (Ley 527 de 1999) y EE.UU. (ESIGN Act).
+Contrato de inversión firmado dentro del **onboarding de inversión**, NO en el registro inicial (el onboarding básico solo pide datos personales). Proveedor base: Documenso (open source, autohospedable); conmutable a proveedor comercial vía `ESIGN_PROVIDER_URL` / `ESIGN_API_KEY`. El estado de firma se recibe por `/api/esign/webhook`. Validez legal en Colombia (Ley 527 de 1999) y EE.UU. (ESIGN Act).
 
 ## Chatbot IA
 

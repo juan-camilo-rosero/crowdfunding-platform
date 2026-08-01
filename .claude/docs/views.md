@@ -27,10 +27,30 @@ app/
 Carpetas y rutas en español (coinciden con la UI). La protección de rutas va en `proxy.ts` en la raíz (Next.js 16 renombró `middleware.ts` a `proxy.ts`).
 
 ## Autenticación (/login)
-Sign in/up unificado: botones "Continuar con Google" y "Continuar con Outlook" (OAuth vía Supabase). Carrusel lateral de 4 slides con features, SIN cifras ni promesas de retorno. Tras login, el middleware decide: si `onboarding_completed` es false → onboarding; si no → inicio.
+Sign in/up unificado: botones "Continuar con Google" y "Continuar con Outlook" (OAuth vía Supabase). Carrusel lateral de 4 slides con features, SIN cifras ni promesas de retorno. Tras login, `proxy.ts` decide el destino:
 
-## Onboarding (/onboarding)
-Solo la primera vez. Pasos: (1) datos personales básicos; (2) verificación de identidad con Truora (ver integrations.md); (3) firma del contrato de inversión (e-sign). Checklist de estado visible. Al completar, `onboarding_completed = true`. La verificación Truora se puede saltar por configuración si el equipo no la activa.
+| `onboarding_completed` | Rol | Destino |
+|---|---|---|
+| false | cualquiera | `/onboarding` (onboarding básico) |
+| true | visitante | `/portafolio` (catálogo público) |
+| true | inversionista | `/inicio` |
+| true | admin | `/inicio` |
+
+## Onboarding (/onboarding) — BÁSICO
+
+IMPORTANTE: el onboarding es por capas. Esta pantalla es solo el **onboarding básico**, que hace TODO usuario recién registrado, sin importar su rol.
+
+Solo la primera vez. Pide únicamente **datos personales**: nombre completo, teléfono (E.164) y ciudad/país. NO incluye verificación de identidad ni firma de contrato. Checklist de estado visible. Al completar, `onboarding_completed = true` y el usuario queda como `visitante` con acceso al catálogo público (`/portafolio`) y su perfil.
+
+El paso a `inversionista` NO ocurre aquí: lo hace el admin al vincular a la persona con un proyecto (Camino B en user-management.md).
+
+## Onboarding de inversión (sprint de integraciones, aún no construido)
+
+La **verificación de identidad con Truora** y la **firma del contrato de inversión** (e-sign) NO ocurren al registrarse. Pertenecen al onboarding de inversión, que se dispara cuando:
+- el usuario va a invertir en un proyecto concreto, o
+- el admin lo vincula como inversionista.
+
+Ver integrations.md para el detalle técnico de ambas integraciones. La verificación Truora se puede saltar por configuración si el equipo no la activa. Este flujo se construye en su sprint correspondiente, no en el registro inicial.
 
 ## Inicio (/inicio) — Home
 - KPIs (4 tarjetas): Invertido actualmente, Capital devuelto/vigente, Rendimiento recibido, Proyectos activos. Cada tarjeta con etiqueta, cifra grande y línea de contexto.

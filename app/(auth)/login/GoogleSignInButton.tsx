@@ -5,31 +5,31 @@ import { createClient } from "@/lib/supabase/browser";
 import { es } from "@/i18n";
 
 /**
- * Única parte cliente del login: necesita onClick para disparar el OAuth.
- * signInWithOAuth redirige el navegador a Google; si falla antes de redirigir,
- * el error se muestra aquí mismo.
+ * The only client-side part of the login screen: it needs onClick to start the
+ * OAuth flow. signInWithOAuth redirects the browser to Google; if it fails
+ * before redirecting, the error is shown here.
  */
 export function GoogleSignInButton() {
-  const [conectando, setConectando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function iniciarSesionConGoogle() {
-    setConectando(true);
-    setError(null);
+  async function signInWithGoogle() {
+    setIsConnecting(true);
+    setErrorMessage(null);
 
     const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/callback`,
       },
     });
 
-    // Si no hubo error el navegador ya se está yendo a Google: no se resetea el
-    // estado para que el botón siga deshabilitado durante la redirección.
-    if (oauthError) {
-      setError(es.login.errores["intercambio-fallido"]);
-      setConectando(false);
+    // On success the browser is already navigating to Google, so the state is
+    // left as-is to keep the button disabled during the redirect.
+    if (error) {
+      setErrorMessage(es.login.errors["exchange-failed"]);
+      setIsConnecting(false);
     }
   }
 
@@ -37,16 +37,16 @@ export function GoogleSignInButton() {
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        onClick={iniciarSesionConGoogle}
-        disabled={conectando}
+        onClick={signInWithGoogle}
+        disabled={isConnecting}
         className="rounded border border-black/15 px-4 py-2 text-sm font-medium disabled:opacity-60 dark:border-white/20"
       >
-        {conectando ? es.login.conectando : es.login.continuarConGoogle}
+        {isConnecting ? es.login.connecting : es.login.signInWithGoogle}
       </button>
 
-      {error ? (
+      {errorMessage ? (
         <p role="alert" className="text-sm text-red-600">
-          {error}
+          {errorMessage}
         </p>
       ) : null}
     </div>

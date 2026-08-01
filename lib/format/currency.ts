@@ -5,7 +5,7 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
 });
 
-/** USD sin decimales, separador de miles: 140926 -> "$140,926". */
+/** USD with thousands separator, no decimals: 140926 -> "$140,926". */
 export function formatCurrency(value: number | null | undefined): string {
   return currencyFormatter.format(value ?? 0);
 }
