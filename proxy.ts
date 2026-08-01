@@ -70,7 +70,10 @@ export async function proxy(request: NextRequest) {
 
   const redirectTo = (path: string) =>
     NextResponse.redirect(new URL(path, request.url));
-  const redirectToLogin = (code: AuthErrorCode) => {
+  // Plain redirect to /login. Reaching the sign-in screen is self-explanatory,
+  // so no message is shown for it; only real failures carry an `?error=` code.
+  const redirectToLogin = () => NextResponse.redirect(new URL("/login", request.url));
+  const redirectToLoginWithError = (code: AuthErrorCode) => {
     const url = new URL("/login", request.url);
     url.searchParams.set("error", code);
     return NextResponse.redirect(url);
@@ -81,7 +84,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!user) {
-    return redirectToLogin("session-required");
+    return redirectToLogin();
   }
 
   // Second query (profile): real authorization also lives in the backend and in
@@ -93,28 +96,28 @@ export async function proxy(request: NextRequest) {
     .single();
 
   if (!profile) {
-    return redirectToLogin("profile-not-found");
+    return redirectToLoginWithError("profile-not-found");
   }
 
   const role = isRole(profile.role) ? profile.role : null;
   const status = isUserStatus(profile.status) ? profile.status : null;
 
   if (!role || !status) {
-    return redirectToLogin("profile-not-found");
+    return redirectToLoginWithError("profile-not-found");
   }
 
   if (status === "suspendido") {
-    return redirectToLogin("account-suspended");
+    return redirectToLoginWithError("account-suspended");
   }
 
   if (status === "desactivado") {
-    return redirectToLogin("account-deactivated");
+    return redirectToLoginWithError("account-deactivated");
   }
 
   if (status === "invitado") {
     // Should not happen: an invited user has no auth.users row until their first
     // login, at which point they become "registrado". Denied here for safety.
-    return redirectToLogin("session-required");
+    return redirectToLogin();
   }
 
   const isAdmin = role === "admin";

@@ -30,7 +30,7 @@ export async function completeBasicOnboarding(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`${LOGIN_ROUTE}?error=session-required`);
+    redirect(LOGIN_ROUTE);
   }
 
   const { data: profile } = await supabase

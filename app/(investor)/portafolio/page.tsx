@@ -13,7 +13,7 @@ import { getCurrentUserProfile } from "@/lib/auth/session";
 export default async function CatalogPage() {
   const profile = await getCurrentUserProfile();
   if (!profile) {
-    redirect(`${LOGIN_ROUTE}?error=session-required`);
+    redirect(LOGIN_ROUTE);
   }
 
   return (

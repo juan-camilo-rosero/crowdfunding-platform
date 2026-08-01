@@ -24,6 +24,40 @@ Resto de reglas que el linter/formatter no impone por sí mismo:
 - Tablas y columnas de base: snake_case en inglés.
 - Componentes en PascalCase, el archivo coincide con el nombre del componente.
 
+## UI y componentes reutilizables
+
+**REGLA NO NEGOCIABLE: nada de markup suelto para controles.** Botones, inputs, selects, skeletons, separadores y demás salen SIEMPRE de un componente de `components/ui/` (shadcn/ui sobre Base UI, con variantes vía `cva`). Si un control no existe, se crea o se agrega con `npx shadcn@latest add <componente>`; no se escribe un `<button>` con clases sueltas en una página.
+
+**REGLA NO NEGOCIABLE: todo elemento interactivo lleva `cursor-pointer`.** Aplica a botones, enlaces, tabs, ítems de menú, filas clicables, dots de carrusel, iconos con acción y cualquier cosa que responda a un clic. Va en el componente base (p. ej. `buttonVariants` ya lo incluye), no repetido en cada uso. Un elemento que aún no es interactivo no lo lleva; en cuanto se le conecta la acción, sí.
+
+- Estados de carga: los resuelve el propio componente. `<Button loading loadingText="…" />` se pone semitransparente, muestra spinner y bloquea clics; no reimplementar ese comportamiento en cada pantalla.
+- Color de marca para acciones primarias: `#060D1F`, expuesto como `--brand` / `bg-brand` (ver `app/globals.css`). No hardcodear el hex en componentes.
+
+### Paleta de texto (escala de grises)
+
+Definida en `app/globals.css`. Usar SIEMPRE estos tokens para el tono del texto, nunca los `gray-*` genéricos de Tailwind ni hex sueltos:
+
+| Token | Hex | Uso |
+|---|---|---|
+| `text-ink-900` | `#1E1E1E` | Títulos y texto de alta jerarquía |
+| `text-ink-700` | `#585858` | Cuerpo de texto, captions |
+| `text-ink-500` | `#848484` | Texto secundario / de apoyo |
+| `text-ink-400` | `#A2A2A2` | Placeholders y texto deshabilitado |
+
+### Tipografía
+
+Fuente única: **Poppins** (`--font-sans`, cargada en `app/layout.tsx`). Escala usada en el login, que sirve de referencia para el resto:
+
+| Elemento | Tamaño | Peso | Color |
+|---|---|---|---|
+| Título de pantalla | 36px (`text-4xl`) | 500 (`font-medium`) | `ink-900` |
+| Subtítulo | 16px (`text-base`) | 400 | `ink-500` |
+| Texto de botón | 16px (`text-base`) | 500 (`font-medium`) | según variante |
+| Placeholder de input | 14px (`md:text-sm`) | 400 | `ink-400` |
+
+Los inputs se mantienen en 16px por debajo de `md` para que iOS no haga zoom al enfocarlos.
+- Imágenes que aún no existen: `<Skeleton />` con las dimensiones finales, para que al sustituirlas no se mueva el layout.
+
 ## Componentes
 - Preferir Server Components por defecto (App Router). Usar `"use client"` solo cuando haga falta interactividad o hooks de cliente.
 - Un componente por archivo; el nombre del archivo coincide con el componente.

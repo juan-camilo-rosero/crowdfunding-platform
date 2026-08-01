@@ -18,7 +18,9 @@ Versiones verificadas (jul 2026). Fijar estas versiones mayores; no bajar de ell
 - Cliente Supabase: **`@supabase/ssr`** para todo lo server-side y de auth. NUNCA usar `@supabase/auth-helpers-*` (deprecado; rompe la app).
 - Autenticación: Supabase Auth con OAuth de Google y Microsoft (Outlook).
 - **Tailwind CSS v4** (configuración CSS-first con `@theme`, sin `tailwind.config.js`).
-- **shadcn/ui** (compatible con Tailwind v4; usa `tw-animate-css`, no `tailwindcss-animate`).
+- **shadcn/ui** (compatible con Tailwind v4; usa `tw-animate-css`, no `tailwindcss-animate`). Instalado sobre **Base UI** (`@base-ui/react`), con `class-variance-authority` para variantes y `lucide-react` para iconos.
+- IMPORTANTE: los controles (botones, inputs, etc.) SIEMPRE salen de `components/ui/`, nunca markup suelto. Todo elemento interactivo lleva `cursor-pointer`. Detalle en `.claude/docs/code-patterns.md`.
+- Color de marca para acciones primarias: `#060D1F`, expuesto como `--brand` / `bg-brand`.
 - **Recharts** para gráficos.
 - **Vercel** para despliegue.
 - Truora (verificación de identidad), Documenso o equivalente (firma electrónica).

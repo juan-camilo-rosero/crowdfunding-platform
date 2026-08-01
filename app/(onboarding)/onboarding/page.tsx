@@ -14,7 +14,7 @@ import { CompleteOnboardingButton } from "./CompleteOnboardingButton";
 export default async function OnboardingPage() {
   const profile = await getCurrentUserProfile();
   if (!profile) {
-    redirect(`${LOGIN_ROUTE}?error=session-required`);
+    redirect(LOGIN_ROUTE);
   }
 
   return (

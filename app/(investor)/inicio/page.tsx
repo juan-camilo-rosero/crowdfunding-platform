@@ -10,7 +10,7 @@ import { getCurrentUser, getCurrentUserProfile } from "@/lib/auth/session";
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect(`${LOGIN_ROUTE}?error=session-required`);
+    redirect(LOGIN_ROUTE);
   }
 
   const profile = await getCurrentUserProfile();

@@ -8,12 +8,29 @@ export const es = {
   },
 
   login: {
-    title: "Investors 180",
-    subtitle: "Ingresa para consultar tus inversiones.",
+    title: "Crea tu cuenta",
+    subtitle: "Consulta en tiempo real el estado y avance de tus inversiones",
+    emailLabel: "Correo electrónico",
+    emailPlaceholder: "Ingresa tu correo electrónico",
+    continue: "Continuar",
+    // Shown inside the primary button while the request is in flight.
+    continuing: "Verificando correo…",
+    dividerOr: "o",
     signInWithGoogle: "Continuar con Google",
     connecting: "Conectando…",
+    logoAlt: "Investors 180 Group",
+    // One caption per carousel slide, same order as the images.
+    // Kept short so each stays on a single line, and free of figures or return
+    // promises (see views.md).
+    carouselSlides: [
+      "Invierte en bienes raíces en Florida desde cualquier lugar",
+      "Sigue el avance de tus proyectos en tiempo real",
+      "Todos tus documentos y movimientos en un solo lugar",
+      "Transparencia completa en cada etapa de tu inversión",
+    ],
+    // {n} is replaced with the slide number.
+    goToSlide: "Ir a la imagen {n}",
     errors: {
-      "session-required": "Inicia sesión para continuar.",
       "missing-code": "No recibimos la respuesta de Google. Inténtalo de nuevo.",
       "exchange-failed":
         "No pudimos completar el inicio de sesión. Inténtalo de nuevo.",

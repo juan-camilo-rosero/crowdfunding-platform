@@ -5,7 +5,6 @@
  * `next/headers` here would break the browser bundle.
  */
 export const AUTH_ERROR_CODES = [
-  "session-required",
   "missing-code",
   "exchange-failed",
   "provider-rejected",
