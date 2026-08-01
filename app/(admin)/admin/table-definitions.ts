@@ -17,6 +17,8 @@ export type AdminTableDefinition = {
   label: string;
   /** Table name in Supabase, checked against the generated schema types. */
   source: SupabaseTableName;
+  /** Records can be created from the "+" row. Defaults to true. */
+  allowInsert?: boolean;
   /** Column used to sort; defaults to created_at. */
   orderBy?: string;
   columns: TableColumn[];
@@ -28,7 +30,7 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Proyectos",
     source: "projects",
     columns: [
-      { key: "name", label: "Nombre", type: "text", width: 220 },
+      { key: "name", label: "Nombre", type: "text", width: 220, required: true },
       {
         key: "company",
         label: "Compañía",
@@ -81,7 +83,7 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Inversionistas",
     source: "investors",
     columns: [
-      { key: "full_name", label: "Nombre completo", type: "text", width: 220 },
+      { key: "full_name", label: "Nombre completo", type: "text", width: 220, required: true },
       { key: "document_id", label: "Cédula", type: "text" },
       { key: "phone", label: "Teléfono", type: "phone" },
       { key: "email", label: "Correo", type: "email" },
@@ -129,8 +131,9 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Capital y financiamiento",
     source: "capital_contributions",
     columns: [
-      { key: "reference", label: "Referencia", type: "text" },
-      { key: "amount_required", label: "Monto requerido", type: "currency" },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "reference", label: "Referencia", type: "text", required: true },
+      { key: "amount_required", label: "Monto requerido", type: "currency", required: true },
       { key: "amount_committed", label: "Monto comprometido", type: "currency" },
       { key: "amount_received", label: "Monto recibido", type: "currency" },
       { key: "received_date", label: "Fecha de recepción", type: "date" },
@@ -157,11 +160,13 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Presupuesto",
     source: "budget_items",
     columns: [
-      { key: "description", label: "Descripción", type: "text", width: 240 },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "description", label: "Descripción", type: "text", width: 240, required: true },
       {
         key: "category",
         label: "Categoría",
         type: "select",
+        required: true,
         options: [
           "lote",
           "closing costs",
@@ -199,7 +204,8 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Timeline",
     source: "tasks",
     columns: [
-      { key: "task", label: "Tarea", type: "text", width: 240 },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "task", label: "Tarea", type: "text", width: 240, required: true },
       {
         key: "stage",
         label: "Etapa",
@@ -243,7 +249,8 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     source: "monthly_reports",
     orderBy: "report_month",
     columns: [
-      { key: "report_month", label: "Mes", type: "date" },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "report_month", label: "Mes", type: "date", required: true },
       { key: "physical_progress", label: "Avance físico", type: "text", width: 220 },
       { key: "financial_progress", label: "Avance financiero", type: "text", width: 220 },
       { key: "capital_used_month", label: "Capital usado", type: "currency" },
@@ -259,11 +266,13 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Documentos",
     source: "documents",
     columns: [
-      { key: "name", label: "Nombre", type: "text", width: 240 },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "name", label: "Nombre", type: "text", width: 240, required: true },
       {
         key: "doc_type",
         label: "Tipo",
         type: "select",
+        required: true,
         options: [
           "deed",
           "property record",
@@ -302,12 +311,15 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     source: "reassignment_requests",
     orderBy: "requested_at",
     columns: [
-      { key: "amount", label: "Monto", type: "currency" },
+      { key: "amount", label: "Monto", type: "currency", required: true },
       {
         key: "status",
         label: "Estado",
         type: "select",
         options: ["pendiente", "aprobada", "rechazada"],
+        // Approving must go through the approvals screen so the reassignment
+        // transaction gets created (database-schema.md).
+        readOnly: true,
       },
       { key: "requested_at", label: "Solicitada", type: "date" },
       { key: "resolved_at", label: "Resuelta", type: "date" },
@@ -317,6 +329,8 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     id: "interes",
     label: "Interés de inversión",
     source: "investment_interests",
+    // Interest forms are submitted by users, never typed in by an admin.
+    allowInsert: false,
     columns: [
       { key: "amount", label: "Monto", type: "currency" },
       {
@@ -339,4 +353,35 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
 
 export function findAdminTable(id: string | undefined): AdminTableDefinition {
   return ADMIN_TABLES.find((table) => table.id === id) ?? ADMIN_TABLES[0];
+}
+
+/** Column that links a child record to its project. */
+export const PROJECT_COLUMN_KEY = "project_id";
+
+/**
+ * Fills the project selector with the real projects. Kept out of the static
+ * definition because the choices come from the database at request time.
+ */
+export function withProjectOptions(
+  definition: AdminTableDefinition,
+  projects: { id: string; name: string }[]
+): AdminTableDefinition {
+  if (!definition.columns.some((column) => column.key === PROJECT_COLUMN_KEY)) {
+    return definition;
+  }
+
+  return {
+    ...definition,
+    columns: definition.columns.map((column) =>
+      column.key === PROJECT_COLUMN_KEY
+        ? {
+            ...column,
+            options: projects.map((project) => ({
+              value: project.id,
+              label: project.name,
+            })),
+          }
+        : column
+    ),
+  };
 }

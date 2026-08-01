@@ -43,6 +43,8 @@ export function EditableCell({
     node?.select();
   }, [isEditing]);
 
+  const isLocked = readOnly || column.readOnly === true;
+
   // Select columns get their own always-interactive control.
   if (meta.input === "select") {
     return (
@@ -50,12 +52,13 @@ export function EditableCell({
         value={value == null ? "" : String(value)}
         options={column.options ?? []}
         onChange={onCommit}
+        readOnly={isLocked}
       />
     );
   }
 
   function startEditing() {
-    if (readOnly) return;
+    if (isLocked) return;
     setDraft(toEditableValue(value, column.type));
     setIsEditing(true);
   }

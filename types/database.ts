@@ -847,6 +847,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_save_table_changes: {
+        Args: { p_inserts?: Json; p_table: string; p_updates?: Json }
+        Returns: Json
+      }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {

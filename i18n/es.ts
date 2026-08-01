@@ -115,9 +115,30 @@ export const es = {
   admin: {
     title: "Panel de administrador",
     saveChanges: "Guardar cambios",
-    // Shown once a cell has been edited; persistence is not wired yet.
-    unsavedNotice: "Cambios sin guardar (el guardado aún no está conectado).",
+    saving: "Guardando…",
+    unsavedNotice: "Tienes cambios sin guardar",
+    saveSuccess: "Cambios guardados",
+    saveError: "No pudimos guardar los cambios. No se aplicó ninguno.",
+    notAuthorized: "No tienes permiso para guardar cambios.",
     loadError: "No pudimos cargar esta tabla.",
     emptyTable: "Esta tabla todavía no tiene registros.",
+    discardConfirm:
+      "Tienes cambios sin guardar. Si continúas se perderán. ¿Quieres salir de todos modos?",
+  },
+
+  // Server-side validation messages. `{campo}` is replaced with the column label.
+  validation: {
+    required: "El campo '{campo}' es obligatorio. Por favor complétalo para poder guardar.",
+    invalidNumber: "El valor de '{campo}' debe ser un número. Revisa que no haya letras ni caracteres especiales.",
+    invalidDate: "La fecha en '{campo}' no es válida. Asegúrate de seleccionarla correctamente.",
+    invalidEmail: "El correo en '{campo}' no tiene un formato válido (ejemplo: usuario@correo.com).",
+    invalidUrl: "El enlace en '{campo}' debe empezar con 'http://' o 'https://'.",
+    invalidOption: "Has seleccionado una opción en '{campo}' que no es válida. Por favor, elige una de la lista.",
+    invalidBoolean: "El campo '{campo}' solo acepta opciones de sí o no.",
+    negativeAmount: "El monto en '{campo}' no puede ser un número negativo.",
+    percentRange: "El porcentaje en '{campo}' debe estar entre 0 y 100.",
+    readOnly: "El campo '{campo}' no se puede editar directamente desde esta tabla.",
+    emptyBatch: "No tienes cambios pendientes por guardar.",
+    unknownTable: "Hubo un problema interno: la tabla que intentas guardar no existe.",
   },
 } as const;

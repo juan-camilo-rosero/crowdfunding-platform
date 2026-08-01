@@ -1,11 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** How far each arrow press scrolls the tab strip, in px. */
 const SCROLL_STEP = 240;
+
+/**
+ * Flips to true once hydration is done. The arrows' enabled state comes from
+ * measuring the DOM, which the server cannot do — without this gate the server
+ * HTML and the first client render disagree on `disabled` and React reports a
+ * hydration mismatch. useSyncExternalStore is used because it is the one hook
+ * that renders `getServerSnapshot` during hydration and only then switches.
+ */
+const NEVER_CHANGES = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export type TableTab = {
   id: string;
@@ -38,6 +55,16 @@ export function TableTabsSelector({
   const stripRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const isHydrated = useSyncExternalStore(
+    NEVER_CHANGES,
+    getHydratedSnapshot,
+    getServerSnapshot
+  );
+
+  // Before hydration both arrows render disabled, matching the server output.
+  const enableLeft = isHydrated && canScrollLeft;
+  const enableRight = isHydrated && canScrollRight;
 
   const syncArrows = useCallback(() => {
     const node = stripRef.current;
@@ -72,12 +99,12 @@ export function TableTabsSelector({
       <button
         type="button"
         onClick={() => scrollBy(-1)}
-        disabled={!canScrollLeft}
+        disabled={!enableLeft}
         aria-label="Ver tablas anteriores"
         className={arrowClassName}
       >
         <ChevronLeftIcon
-          className={cn("size-full", canScrollLeft ? "text-brand" : "text-ink-700")}
+          className={cn("size-full", enableLeft ? "text-brand" : "text-ink-700")}
         />
       </button>
 
@@ -112,12 +139,12 @@ export function TableTabsSelector({
       <button
         type="button"
         onClick={() => scrollBy(1)}
-        disabled={!canScrollRight}
+        disabled={!enableRight}
         aria-label="Ver tablas siguientes"
         className={arrowClassName}
       >
         <ChevronRightIcon
-          className={cn("size-full", canScrollRight ? "text-brand" : "text-ink-700")}
+          className={cn("size-full", enableRight ? "text-brand" : "text-ink-700")}
         />
       </button>
     </div>

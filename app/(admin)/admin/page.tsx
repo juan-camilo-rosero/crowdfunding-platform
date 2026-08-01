@@ -3,12 +3,17 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { createClient } from "@/lib/supabase/server";
 import type { TableRow } from "@/lib/table/types";
 import { AdminTablesPanel } from "./AdminTablesPanel";
-import { ADMIN_TABLES, findAdminTable } from "./table-definitions";
+import {
+  ADMIN_TABLES,
+  PROJECT_COLUMN_KEY,
+  findAdminTable,
+  withProjectOptions,
+} from "./table-definitions";
 
 /**
  * Admin panel landing. `proxy.ts` already guarantees role = 'admin' here; the
- * data itself is read with the caller's own session, so RLS stays the second
- * barrier (the admin policies are what allow reading every row).
+ * data is read with the caller's own session, so RLS stays the second barrier
+ * (the admin policies are what allow reading every row).
  */
 export default async function AdminHomePage({
   searchParams,
@@ -16,14 +21,29 @@ export default async function AdminHomePage({
   searchParams: Promise<{ tabla?: string }>;
 }) {
   const { tabla } = await searchParams;
-  const definition = findAdminTable(tabla);
+  const baseDefinition = findAdminTable(tabla);
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from(definition.source)
-    .select("*")
-    .order(definition.orderBy ?? "created_at", { ascending: false })
-    .limit(100);
+
+  const needsProjects = baseDefinition.columns.some(
+    (column) => column.key === PROJECT_COLUMN_KEY
+  );
+
+  const [{ data, error }, projectsResult] = await Promise.all([
+    supabase
+      .from(baseDefinition.source)
+      .select("*")
+      .order(baseDefinition.orderBy ?? "created_at", { ascending: true })
+      .limit(100),
+    needsProjects
+      ? supabase.from("projects").select("id, name").order("name")
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
+
+  const definition = withProjectOptions(
+    baseDefinition,
+    projectsResult.data ?? []
+  );
 
   const rows = (data ?? []) as TableRow[];
 
@@ -42,6 +62,7 @@ export default async function AdminHomePage({
         activeTabId={definition.id}
         columns={definition.columns}
         rows={rows}
+        allowInsert={definition.allowInsert !== false}
       />
     </div>
   );

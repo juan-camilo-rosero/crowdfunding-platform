@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { PlusIcon } from "lucide-react";
 import { resolveColumnWidth } from "@/lib/table/format-cell";
-import type { TableColumn, TableRow } from "@/lib/table/types";
+import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./EditableCell";
 import { DataTableHeaderCell } from "./DataTableHeaderCell";
@@ -21,12 +21,10 @@ export type EditableDataTableProps = {
   /** Field used as the stable row key. Defaults to "id", falls back to index. */
   rowIdKey?: string;
   /**
-   * Notified on every committed cell edit of an EXISTING row. The table already
-   * keeps the value locally; this is for callers tracking pending changes.
+   * Reports the full pending batch (updates + inserts) after every change, so
+   * the caller can enable its save button and hand the batch to the server.
    */
-  onCellChange?: (rowId: string, columnKey: string, value: string) => void;
-  /** Notified when a draft row becomes a new record. */
-  onRowCreate?: (row: TableRow) => void;
+  onChangesChange?: (changes: TableChanges) => void;
   /** Renders the trailing draft row that creates records. */
   showNewRecordRow?: boolean;
   emptyMessage?: string;
@@ -39,8 +37,9 @@ export type EditableDataTableProps = {
  * block. Only the whole grid scrolls horizontally, and it is the one section
  * allowed to exceed the protected content width.
  *
- * Editing is per cell (double click; single click on `select` columns) and
- * lives in LOCAL STATE only — nothing is persisted yet.
+ * Editing is per cell (double click; single click on `select` columns). Changes
+ * accumulate LOCALLY and are reported through `onChangesChange`; the caller
+ * decides when to persist them (batch save).
  *
  * IMPORTANT — pass a `key` tied to the dataset:
  *
@@ -55,16 +54,15 @@ export function EditableDataTable({
   columns,
   rows,
   rowIdKey = "id",
-  onCellChange,
-  onRowCreate,
+  onChangesChange,
   showNewRecordRow = true,
   emptyMessage = "No hay registros todavía.",
 }: EditableDataTableProps) {
-  // Overrides for existing rows, keyed by `${rowId}:${columnKey}`.
-  const [edits, setEdits] = useState<Record<string, string>>({});
-  // Records created locally from the draft row (not persisted).
+  /** Pending cell edits, grouped by row id then column. */
+  const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
+  /** Rows created locally from the draft row; they become INSERTs on save. */
   const [createdRows, setCreatedRows] = useState<TableRow[]>([]);
-  // Values typed into the draft row before it becomes a record.
+  /** Values typed into the draft row before it becomes a record. */
   const [draft, setDraft] = useState<TableRow>({});
 
   const widths = useMemo(
@@ -79,20 +77,60 @@ export function EditableDataTable({
   const allRows = useMemo(() => [...rows, ...createdRows], [rows, createdRows]);
 
   const rowIds = useMemo(
-    () =>
-      allRows.map((row, index) => String(row[rowIdKey] ?? `row-${index}`)),
+    () => allRows.map((row, index) => String(row[rowIdKey] ?? "row-" + index)),
     [allRows, rowIdKey]
   );
 
+  /** Ids that already exist in the database, as opposed to local drafts. */
+  const persistedIds = useMemo(
+    () =>
+      new Set(rows.map((row, index) => String(row[rowIdKey] ?? "row-" + index))),
+    [rows, rowIdKey]
+  );
+
+  /**
+   * Turns local state into the batch the server expects: edits to persisted
+   * rows are UPDATEs, locally created rows (with their later edits merged) are
+   * INSERTs. Local ids never leave the client.
+   */
+  function computeChanges(
+    nextEdits: Record<string, Record<string, string>>,
+    nextCreated: TableRow[]
+  ): TableChanges {
+    const updates = Object.entries(nextEdits)
+      .filter(([rowId]) => persistedIds.has(rowId))
+      .map(([rowId, values]) => ({ id: rowId, values }));
+
+    const inserts = nextCreated.map((row) => {
+      const localId = String(row[rowIdKey]);
+      const merged: Record<string, string> = {};
+      for (const column of columns) {
+        const edited = nextEdits[localId]?.[column.key];
+        const value = edited !== undefined ? edited : row[column.key];
+        if (value !== undefined && value !== null && value !== "") {
+          merged[column.key] = String(value);
+        }
+      }
+      return merged;
+    });
+
+    return { updates, inserts };
+  }
+
   function valueFor(rowIndex: number, column: TableColumn) {
-    const key = `${rowIds[rowIndex]}:${column.key}`;
-    return key in edits ? edits[key] : allRows[rowIndex][column.key];
+    const rowId = rowIds[rowIndex];
+    const edited = edits[rowId]?.[column.key];
+    return edited !== undefined ? edited : allRows[rowIndex][column.key];
   }
 
   function handleCommit(rowIndex: number, column: TableColumn, value: string) {
     const rowId = rowIds[rowIndex];
-    setEdits((current) => ({ ...current, [`${rowId}:${column.key}`]: value }));
-    onCellChange?.(rowId, column.key, value);
+    const nextEdits = {
+      ...edits,
+      [rowId]: { ...(edits[rowId] ?? {}), [column.key]: value },
+    };
+    setEdits(nextEdits);
+    onChangesChange?.(computeChanges(nextEdits, createdRows));
   }
 
   /**
@@ -107,11 +145,12 @@ export function EditableDataTable({
     const created: TableRow = {
       ...draft,
       [column.key]: value,
-      [rowIdKey]: `local-${createdRows.length}`,
+      [rowIdKey]: "local-" + createdRows.length,
     };
-    setCreatedRows((current) => [...current, created]);
+    const nextCreated = [...createdRows, created];
+    setCreatedRows(nextCreated);
     setDraft({});
-    onRowCreate?.(created);
+    onChangesChange?.(computeChanges(edits, nextCreated));
   }
 
   if (allRows.length === 0 && !showNewRecordRow) {
@@ -123,8 +162,8 @@ export function EditableDataTable({
   }
 
   return (
-    // Scrollbar hidden: it used to overlay the last row. Scroll with a trackpad,
-    // shift+wheel, or by focusing a cell and using the arrow keys.
+    // Scrollbar hidden: it used to overlay the last row. Scroll with a trackpad
+    // or shift+wheel.
     <div className="w-full overflow-x-auto rounded-[5px] border border-line scrollbar-none selection:bg-brand selection:text-elevated">
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
@@ -176,7 +215,7 @@ export function EditableDataTable({
         {showNewRecordRow ? (
           <div
             // Remounting on every creation clears the inputs.
-            key={`draft-${createdRows.length}`}
+            key={"draft-" + createdRows.length}
             className={cn(ROW_HEIGHT, "flex")}
           >
             <div
