@@ -111,4 +111,13 @@ export const es = {
   placeholder: {
     notice: "Pantalla pendiente de construcción.",
   },
+
+  admin: {
+    title: "Panel de administrador",
+    saveChanges: "Guardar cambios",
+    // Shown once a cell has been edited; persistence is not wired yet.
+    unsavedNotice: "Cambios sin guardar (el guardado aún no está conectado).",
+    loadError: "No pudimos cargar esta tabla.",
+    emptyTable: "Esta tabla todavía no tiene registros.",
+  },
 } as const;
