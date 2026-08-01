@@ -30,12 +30,12 @@ Carpetas y rutas en español (coinciden con la UI). La protección de rutas va e
 
 El menú NO se construye a partir de un rol único, sino sumando capacidades independientes (ver user-management.md):
 
-- **Sección de inversionista** (inicio, portafolio, mis-inversiones, transacciones, documentos, solicitudes, perfil): visible si la persona **tiene vínculo** en `investors`.
-- **Sección de admin** (proyectos, inversionistas, capital, presupuesto, tareas, reportes, documentos, usuarios, pipeline, aprobaciones): visible si `users.role = 'admin'`.
+Tres reglas: **el admin ve todo · el inversionista ve todo menos la sección de admin · el visitante ve únicamente el catálogo.**
+
+- **Sección de inversionista** (inicio, catálogo, mis-inversiones, transacciones, documentos, solicitudes): visible si la persona **tiene vínculo** en `investors` **o** es admin.
+- **Sección "Admin"** (panel de administrador, embudo de ventas): visible solo si `users.role = 'admin'`.
 - **La dueña (admin + con vínculo) ve LAS DOS secciones** en el mismo sidebar.
-- Un admin sin inversión ve la sección admin más el catálogo y su perfil, sin las pestañas de inversionista.
-- Un usuario común con inversión ve solo la sección de inversionista.
-- Un usuario sin vínculo y sin admin ve solo catálogo y perfil.
+- Un usuario sin vínculo y sin admin ve solo el catálogo y su perfil.
 
 Las pestañas de admin se OCULTAN por completo para quien no es admin (no se muestran deshabilitadas). Lo mismo con las de inversionista para quien no tiene vínculo.
 

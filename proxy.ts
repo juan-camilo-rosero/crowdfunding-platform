@@ -24,8 +24,7 @@ const ADMIN_PATH = ADMIN_HOME_ROUTE;
 // Public catalog + profile: any authenticated, onboarded user.
 const CATALOG_PATHS = [CATALOG_ROUTE, "/proyecto", "/perfil"];
 
-// Routes that require the INVESTOR capability (a linked row in `investors`),
-// not a role. An admin without investments has no data to show here.
+// Investor-section routes: reachable with the investor link OR the admin role.
 const INVESTOR_ONLY_PATHS = [
   "/inicio",
   "/mis-inversiones",
@@ -174,9 +173,13 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Investor routes require the link, NOT the admin role.
+  // Investor routes: the investor link OR the admin role gets in, because the
+  // admin sees everything (user-management.md). An admin with no contributions
+  // sees these screens empty, which is valid information.
   if (INVESTOR_ONLY_PATHS.some((p) => isPathUnder(pathname, p))) {
-    return (await isInvestor()) ? response : redirectTo(await homeRoute());
+    return isAdmin || (await isInvestor())
+      ? response
+      : redirectTo(await homeRoute());
   }
 
   return response;

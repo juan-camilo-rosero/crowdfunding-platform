@@ -72,11 +72,25 @@ export const es = {
     placeholder: "Pantalla temporal. Aquí va el catálogo de proyectos del grupo.",
   },
 
+  account: {
+    // Capability label under the user's name in the sidebar footer.
+    admin: "Administrador",
+    investor: "Inversionista",
+    visitor: "Visitante",
+    openMenu: "Abrir menú de cuenta",
+    signOut: "Cerrar sesión",
+    signingOut: "Cerrando sesión…",
+  },
+
   nav: {
-    investorSection: "Mi inversión",
-    adminSection: "Administración",
+    search: "Buscar",
+    toggleSidebar: "Contraer menú",
+    investorSection: "Menú",
+    adminSection: "Admin",
+    adminPanel: "Panel de administrador",
+    salesFunnel: "Embudo de ventas",
     home: "Inicio",
-    catalog: "Portafolio",
+    catalog: "Catálogo",
     myInvestments: "Mis inversiones",
     transactions: "Transacciones",
     documents: "Documentos",

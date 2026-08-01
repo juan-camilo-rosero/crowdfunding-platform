@@ -28,8 +28,9 @@ Las pruebas que no pueden fallar:
   1. Desde la navegación normal (no debe existir la opción).
   2. Pegando la URL directa del recurso ajeno (el backend debe negar).
   3. Llamando directo a la consulta/endpoint (RLS debe bloquear).
-- Alguien sin vínculo de inversionista no accede a rutas de inversionista (`/inicio`, `/mis-inversiones`, `/transacciones`…) por URL directa, **aunque sea admin**.
-- Alguien sin `role = 'admin'` no accede al panel admin por URL directa, **aunque tenga inversiones**.
+- Un **visitante** (sin vínculo y sin admin) no accede a ninguna ruta de inversionista ni de admin por URL directa: solo catálogo y perfil.
+- Alguien sin `role = 'admin'` no accede al panel admin por URL directa, **aunque tenga inversiones**. Esta barrera nunca se relaja.
+- Un **admin** sí accede a las rutas de inversionista (ve todo); si no tiene aportes las ve vacías.
 - La dueña (admin + con vínculo) accede a ambas secciones, y en `/inicio` sigue viendo SOLO sus propias inversiones.
 - Un inversionista no aprueba sus propias solicitudes.
 - El admin ve los datos de todos únicamente a través de `/admin/*`.

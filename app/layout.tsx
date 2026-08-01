@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { es } from "@/i18n";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 // Geometric sans matching the brand reference. Exposed as --font-sans, which is
@@ -23,7 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${poppins.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {/* Required by SidebarMenuButton's `tooltip` prop when collapsed. */}
+        <TooltipProvider>{children}</TooltipProvider>
+      </body>
     </html>
   );
 }

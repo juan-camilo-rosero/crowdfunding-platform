@@ -33,9 +33,18 @@ type InputProps = React.ComponentProps<"input"> &
   Omit<VariantProps<typeof inputVariants>, "hasIcon"> & {
     /** Decorative icon rendered inside the field, at the inline start. */
     icon?: React.ReactNode
+    /** Styles for the wrapper that positions `icon`; ignored without one. */
+    wrapperClassName?: string
   }
 
-function Input({ className, type, inputSize, icon, ...props }: InputProps) {
+function Input({
+  className,
+  type,
+  inputSize,
+  icon,
+  wrapperClassName,
+  ...props
+}: InputProps) {
   const field = (
     <InputPrimitive
       type={type}
@@ -48,7 +57,10 @@ function Input({ className, type, inputSize, icon, ...props }: InputProps) {
   if (!icon) return field
 
   return (
-    <div data-slot="input-wrapper" className="relative w-full">
+    <div
+      data-slot="input-wrapper"
+      className={cn("relative w-full", wrapperClassName)}
+    >
       <span
         aria-hidden="true"
         className={cn(

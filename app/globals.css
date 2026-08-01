@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-surface: var(--surface);
   --color-ink-900: var(--ink-900);
   --color-ink-700: var(--ink-700);
   --color-ink-500: var(--ink-500);
@@ -59,6 +60,24 @@
   --brand: #060d1f;
   --brand-foreground: #ffffff;
 
+  /* Dashboard canvas behind the content area, next to the sidebar. */
+  --surface: #f2f2f2;
+
+  /*
+   * Dashboard metrics, measured on a 1512x920 viewport.
+   *   sidebar        298px fixed
+   *   content column 996px max, centered
+   *   side padding   ~109px (9% of the 1214px left over next to the sidebar)
+   *   top padding    79px
+   * Horizontal spacing is a percentage so it scales with the container; the
+   * top padding tracks viewport height. Both are clamped so they stay usable
+   * on very small and very large screens.
+   */
+  --sidebar-width-desktop: 298px;
+  --content-max-width: 996px;
+  --content-padding-inline: clamp(1.25rem, 9%, 110px);
+  --content-padding-top: clamp(1.5rem, 8.6vh, 79px);
+
   /*
    * Grayscale text ramp from the design system. Use these for any text tone
    * instead of Tailwind's generic gray-*, so the whole app stays on palette.
@@ -98,13 +117,16 @@
   /* Base corner radius. The whole radius-* scale derives from this, so lowering
      it softens every control at once instead of per-component overrides. */
   --radius: 0.4rem;
-  --sidebar: oklch(0.985 0 0);
+  /* Sidebar shares the canvas color; only the borders separate the two. */
+  --sidebar: var(--surface);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
+  /* Active nav item background. */
+  --sidebar-accent: #f8f8f8;
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  /* Every sidebar rule: outer edge and internal separators. */
+  --sidebar-border: #e2e2e2;
   --sidebar-ring: oklch(0.708 0 0);
 }
 

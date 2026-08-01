@@ -45,14 +45,22 @@ Con `onboarding_completed = false`, **cualquier** combinación va a `/onboarding
 |---|---|---|---|---|---|
 | **Visitante sin inversión** | `visitante` | No | `/portafolio` | Solo catálogo y perfil | `/portafolio`, `/proyecto/[id]`, `/perfil`. NADA más. |
 | **Visitante con inversión** | `visitante` | Sí | `/inicio` | Sección inversionista | Todo lo suyo: inicio, portafolio, mis-inversiones, transacciones, documentos, solicitudes, perfil. Nunca `/admin/*`. |
-| **Admin sin inversión** | `admin` | No | `/admin` | Sección admin + catálogo | Panel admin completo, catálogo y perfil. NO ve las pestañas de inversionista (no tiene inversiones que mostrar). |
+| **Admin sin inversión** | `admin` | No | `/admin` | Ambas secciones | **El admin ve TODO**: panel admin, sección de inversionista, catálogo y perfil. Sus pantallas de inversionista salen vacías si no tiene aportes, y eso es correcto. |
 | **Admin con inversión** (la dueña) | `admin` | Sí | `/inicio` | Ambas secciones | Todo: sus propias inversiones + panel admin completo. |
 
 Reglas que se derivan de la tabla y que NO deben romperse:
 
-- **El sidebar se arma por capacidades, no por un rol único.** La sección de inversionista aparece si hay vínculo; la de admin, si `role = 'admin'`. La dueña ve las dos.
-- **Las rutas de inversionista (`/inicio`, `/mis-inversiones`, `/transacciones`, `/documentos`, `/solicitudes`) exigen VÍNCULO de inversionista**, no `role`. Un admin sin inversión no entra: esas pantallas muestran datos propios que él no tiene, y para ver los de otros existe `/admin/*`.
-- **Las rutas `/admin/*` exigen `role = 'admin'`.** Tener inversiones no da acceso al panel.
+Las tres reglas de visibilidad, en una línea:
+
+1. **El admin ve todo** (sección de inversionista + sección de admin).
+2. **El inversionista ve todo menos la sección de admin.**
+3. **El visitante ve únicamente el catálogo** (y su perfil).
+
+De ahí se derivan:
+
+- **El sidebar se arma por capacidades, no por un rol único.** La sección de inversionista aparece si hay vínculo **o si es admin**; la de admin, solo si `role = 'admin'`. La dueña ve las dos.
+- **Las rutas de inversionista (`/inicio`, `/mis-inversiones`, `/transacciones`, `/documentos`, `/solicitudes`) exigen vínculo de inversionista O `role = 'admin'`.** Un admin sin aportes las ve vacías, que es información válida.
+- **Las rutas `/admin/*` exigen `role = 'admin'`.** Tener inversiones NO da acceso al panel: esa es la barrera que nunca se relaja.
 - **Un visitante SÍ hace el onboarding básico.** `/onboarding` está abierto a cualquier usuario autenticado con `onboarding_completed = false`. Todos nacen `visitante` sin vínculo.
 - **Vincular como inversionista lo hace SOLO el admin** (crea/conecta la fila en `investors`). Nadie se autoasciende completando el onboarding.
 - Un usuario con `onboarding_completed = false` que pida cualquier ruta privada se devuelve a `/onboarding`, no a `/login` (ya tiene sesión válida).
