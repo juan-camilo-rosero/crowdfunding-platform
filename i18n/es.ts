@@ -62,7 +62,7 @@ export const es = {
       yieldNone: "Aún no has recibido rendimientos",
 
       returnPct: "Retorno acumulado",
-      returnFrom: "Sobre el capital ya liquidado",
+      returnFrom: "Sobre capital liquidado",
       // Shown when nothing has been liquidated yet: the ratio is not measurable.
       returnEmpty: "—",
 
@@ -109,6 +109,63 @@ export const es = {
   catalog: {
     title: "Portafolio Investors 180",
     placeholder: "Pantalla temporal. Aquí va el catálogo de proyectos del grupo.",
+  },
+
+  projects: {
+    // Display labels for projects.status. The stored values are lowercase and
+    // some read better with a leading preposition.
+    status: {
+      "en evaluación": "En evaluación",
+      "en reserva": "En reserva",
+      permisos: "En permisos",
+      construcción: "En construcción",
+      vendido: "Vendido",
+      rentado: "Rentado",
+      pausado: "Pausado",
+    } as Record<string, string>,
+    // Title is composed as "{tipo} en {ciudad}, Florida".
+    type: {
+      lote: "Lote",
+      casa: "Casa",
+      triplex: "Triplex",
+      multifamily: "Multifamily",
+    } as Record<string, string>,
+    state: "Florida",
+    untitled: "Proyecto",
+    imageAlt: "Foto del proyecto",
+    noImage: "Sin foto todavía",
+  },
+
+  investmentCard: {
+    // {amount} is the fundraising goal, already formatted.
+    goal: "Objetivo: US {amount}",
+    noGoal: "Sin captación abierta",
+    expectedReturn: "Retorno esperado",
+    expectedAnnualReturn: "Retorno anual esperado",
+    // Shown when the position's contributions disagree on the agreed return.
+    mixedReturn: "Varios",
+    noReturn: "—",
+    seeMore: "Ver más",
+  },
+
+  myInvestments: {
+    title: "Mis inversiones",
+    empty: "Aún no tienes inversiones activas",
+    emptyHint:
+      "Explora el portafolio de Investors 180 y encuentra un proyecto que te interese.",
+    emptyAction: "Ver el portafolio",
+  },
+
+  projectDetail: {
+    // Scaffolding only; the real layout comes later.
+    notice: "Pantalla en construcción. Los datos ya se cargan del proyecto real.",
+    yourInvestment: "Tu inversión en este proyecto",
+    currentCapital: "Capital vigente",
+    contributed: "Total aportado",
+    returned: "Capital devuelto",
+    yield: "Rendimiento recibido",
+    noPosition: "No tienes capital invertido en este proyecto.",
+    backToHome: "Volver a inicio",
   },
 
   account: {

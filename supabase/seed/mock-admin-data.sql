@@ -109,3 +109,17 @@ values
 --
 -- Adjust the filter if real transactions ever coexist with these.
 -- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
+-- MOCK capital_contributions for the developer's investor, added so the
+-- "Mis inversiones" cards show a real agreed return. They deliberately cover
+-- every branch of the resolution rule (lib/projects/labels.ts):
+--   Villa Rotonda 118      one contribution   -> "15% anual"
+--   Punta Gorda Duplex 24  two, both equal    -> "12% anual"
+--   Rotonda Multifamily    two that disagree  -> "Varios"
+--   North Port Lote 7      participation      -> "Participación 10%"
+-- The fourth position also makes the grid show an incomplete row (3 + 1).
+--
+-- Removed together with the rest: they carry '[MOCK]' in `comments`.
+--   delete from public.capital_contributions where comments like '[MOCK]%';
+-- -----------------------------------------------------------------------------

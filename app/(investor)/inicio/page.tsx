@@ -1,18 +1,21 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BuildingIcon,
   DollarSignIcon,
+  FolderOpenIcon,
   PercentIcon,
   PieChartIcon,
   TrendingUpIcon,
 } from "lucide-react";
 import { es } from "@/i18n";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
-import { LOGIN_ROUTE } from "@/lib/auth/routes";
+import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { KpiCard } from "@/components/cards/KpiCard";
+import { ProjectInvestmentCard } from "@/components/cards/ProjectInvestmentCard";
 import {
   ContributionTimeline,
   type TimelineEntry,
@@ -120,8 +123,48 @@ export default async function HomePage() {
   ];
 
   const { data: projectRows } = projectIds.length
-    ? await supabase.from("projects").select("id, name").in("id", projectIds)
+    ? await supabase
+        .from("projects")
+        .select("id, name, type, city, status, main_photos, fundraising_goal")
+        .in("id", projectIds)
     : { data: [] };
+
+  // Raised capital per project (for the card's progress bar) and the agreed
+  // returns of this investor's contributions, used by "Mis inversiones".
+  const investedProjectIds = distributionRows
+    .map((row) => row.project_id)
+    .filter((id): id is string => !!id);
+
+  const [totalsResult, contractsResult] = await Promise.all([
+    investedProjectIds.length
+      ? supabase
+          .from("project_totals")
+          .select("project_id, capital_received")
+          .in("project_id", investedProjectIds)
+      : Promise.resolve({ data: [] }),
+    hasInvestorLink && investedProjectIds.length
+      ? supabase
+          .from("capital_contributions")
+          .select("project_id, agreed_return")
+          .in("investor_id", investorIds)
+          .in("project_id", investedProjectIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const raisedByProject = new Map(
+    (totalsResult.data ?? []).map((row) => [
+      row.project_id,
+      Number(row.capital_received ?? 0),
+    ])
+  );
+
+  const returnsByProject = new Map<string, (string | null)[]>();
+  for (const row of contractsResult.data ?? []) {
+    if (!row.project_id) continue;
+    const current = returnsByProject.get(row.project_id) ?? [];
+    current.push(row.agreed_return);
+    returnsByProject.set(row.project_id, current);
+  }
 
   const projectsById = new Map(
     (projectRows ?? []).map((project) => [project.id, project])
@@ -279,6 +322,65 @@ export default async function HomePage() {
             />
           </section>
         </div>
+
+        {/* Row 3 — "Mis inversiones": three cards per row (col-span-4 of 12).
+            An incomplete last row keeps the card width and stays left-aligned,
+            which grid columns give for free. */}
+        <section className="flex flex-col gap-5">
+          <h2 className="text-2xl font-medium text-zinc-600">
+            {es.myInvestments.title}
+          </h2>
+
+          {segments.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 px-6 py-12 text-center">
+              <span
+                aria-hidden="true"
+                className="flex size-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
+              >
+                <FolderOpenIcon className="size-5" />
+              </span>
+              <div>
+                <p className="text-base font-medium text-stone-900">
+                  {es.myInvestments.empty}
+                </p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {es.myInvestments.emptyHint}
+                </p>
+              </div>
+              <Link
+                href={CATALOG_ROUTE}
+                className="mt-1 flex h-10 cursor-pointer items-center justify-center rounded-[10px] bg-stone-900 px-5 text-base font-medium text-white transition-opacity hover:opacity-90"
+              >
+                {es.myInvestments.emptyAction}
+              </Link>
+            </div>
+          ) : (
+            <div className="grid auto-rows-fr grid-cols-12 gap-5">
+              {segments.map((segment) => {
+                const project = projectsById.get(segment.id);
+                return (
+                  <div
+                    key={segment.id}
+                    className="col-span-12 sm:col-span-6 xl:col-span-4"
+                  >
+                    <ProjectInvestmentCard
+                      projectId={segment.id}
+                      name={project?.name ?? es.projects.untitled}
+                      type={project?.type ?? null}
+                      city={project?.city ?? null}
+                      status={project?.status ?? null}
+                      imageUrl={project?.main_photos?.[0] ?? null}
+                      fundraisingGoal={project?.fundraising_goal ?? null}
+                      capitalRaised={raisedByProject.get(segment.id) ?? 0}
+                      investedAmount={segment.value}
+                      agreedReturns={returnsByProject.get(segment.id) ?? []}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
