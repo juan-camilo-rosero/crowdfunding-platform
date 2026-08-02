@@ -33,15 +33,52 @@ IMPORTANTE — cambios de Next.js 16 que afectan el código:
 
 ## Comandos
 
+El proyecto usa **npm** (hay `package-lock.json`, no `pnpm-lock.yaml`).
+
 ```
-pnpm dev            # desarrollo local
-pnpm build          # build de producción
-pnpm lint           # ESLint
-pnpm typecheck      # tsc --noEmit
+npm run dev         # desarrollo local
+npm run build       # build de producción
+npm run lint        # ESLint
+npm run typecheck   # tsc --noEmit
 ```
 
-- YOU MUST correr `pnpm typecheck` y `pnpm lint` después de cualquier serie de cambios.
+- YOU MUST correr `npm run typecheck` y `npm run lint` después de cualquier serie de cambios.
 - Los tipos de TypeScript en `types/` mapean 1:1 con las tablas de la base.
+
+### Manejo del dev server (IMPORTANTE — Turbopack corrompe su caché)
+
+Turbopack guarda una caché persistente en `.next/dev/cache/turbopack/` (archivos `.sst`, tipo base de datos). Se corrompe con facilidad, y cuando pasa **el síntoma engaña**: las rutas devuelven 404 o 500 aunque el archivo `page.tsx` exista y `tsc`/`lint` pasen limpios. En el log aparece:
+
+```
+TurbopackInternalError: Failed to open SST file .next/dev/cache/turbopack/…/000000XX.sst
+→ ENOENT: … /page/build-manifest.json
+```
+
+**Reglas para no provocarlo:**
+
+1. **NUNCA matar el dev server con `taskkill /F`** (ni `kill -9`), y menos a mitad de compilación. Detenerlo con Ctrl+C para que cierre la caché ordenadamente.
+2. **UN SOLO dev server a la vez.** Dos procesos escribiendo la misma caché la corrompen. Si Next avisa *"Another next dev server is already running"*, detén el otro en vez de abrir uno nuevo en otro puerto.
+3. No borrar ni recrear archivos de ruta (`page.tsx`, `layout.tsx`) con el server corriendo; si hay que hacerlo, detenerlo antes.
+
+**Cómo recuperarse** (PowerShell, que es la shell de este equipo — `rm -rf` NO funciona ahí):
+
+```powershell
+# 1. detener TODOS los dev servers (el orden importa: si borras la caché
+#    con un server vivo, la reescribe corrupta al instante)
+Get-NetTCPConnection -LocalPort 3000,3001 -State Listen |
+  Select-Object -ExpandProperty OwningProcess -Unique |
+  ForEach-Object { Stop-Process -Id $_ -Force }
+
+# 2. borrar la caché (es 100% regenerable, no es código)
+Remove-Item -Recurse -Force .next
+
+# 3. levantar uno solo
+npm run dev
+```
+
+Después, **Ctrl+Shift+R** en el navegador: la pestaña puede seguir con el bundle viejo.
+
+**Cómo diagnosticarlo:** el log real de Next vive en `.next/dev/logs/next-development.log`, no en la salida de la terminal. Ahí se ve el `TurbopackInternalError`. Antes de culpar al código: si una ruta da 404/500 pero su archivo existe y `tsc` pasa, comprobar si otras rutas que **no se tocaron** también fallan — si sí, es la caché, no el código.
 
 ## Idioma
 

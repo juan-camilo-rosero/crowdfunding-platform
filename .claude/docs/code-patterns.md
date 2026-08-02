@@ -100,4 +100,4 @@ Los inputs se mantienen en 16px por debajo de `md` para que iOS no haga zoom al 
 
 ## Git
 - Commits pequeños por paso de tarea, en español, con prefijo tipo `feat:`, `fix:`, `chore:`.
-- Correr `pnpm typecheck` y `pnpm lint` antes de commit.
+- Correr `npm run typecheck` y `npm run lint` antes de commit.

@@ -91,3 +91,21 @@ values
 --     where project_id in (select id from public.projects where description like '[MOCK]%');
 --   delete from public.investors where notes like '[MOCK]%';
 --   delete from public.projects where description like '[MOCK]%';
+
+-- -----------------------------------------------------------------------------
+-- MOCK transactions for the investor home screen (added later, via the REST
+-- API, because they need the real investor/project UUIDs).
+--
+-- They belong to the investor linked to the developer account and reproduce the
+-- figures from the design spec: 3 open positions ($45.926 + $15.000 + $10.000 =
+-- $70.926 current capital) plus one fully closed position ($70.000 contributed,
+-- $70.000 returned, $18.500 yield) which yields +26,43% accumulated return.
+--
+-- They carry no [MOCK] marker of their own — `transactions` has no free-text
+-- column — so they are removed by investor instead:
+--
+--   delete from public.transactions
+--     where investor_id in (select id from public.investors);
+--
+-- Adjust the filter if real transactions ever coexist with these.
+-- -----------------------------------------------------------------------------

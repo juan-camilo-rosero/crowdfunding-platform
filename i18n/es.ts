@@ -44,12 +44,51 @@ export const es = {
     } satisfies Record<AuthErrorCode, string>,
   },
 
-  // Temporary Sprint 1 placeholders (replaced when the real views are built).
   home: {
     title: "Inicio",
     signedInAs: "Sesión iniciada como",
     role: "Rol",
     status: "Estado",
+
+    kpi: {
+      invested: "Total invertido",
+      // {n} is replaced with the number of active projects.
+      investedIn: "Trabajando en {n} proyectos",
+      investedInOne: "Trabajando en 1 proyecto",
+      investedNone: "Aún no tienes inversiones activas",
+
+      yield: "Rendimiento recibido",
+      yieldFrom: "De proyectos ya cerrados",
+      yieldNone: "Aún no has recibido rendimientos",
+
+      returnPct: "Retorno acumulado",
+      returnFrom: "Sobre el capital ya liquidado",
+      // Shown when nothing has been liquidated yet: the ratio is not measurable.
+      returnEmpty: "—",
+
+      projects: "Mis proyectos",
+      // {n} is replaced with the count.
+      projectsActive: "{n} activos",
+      projectsActiveOne: "1 activo",
+      projectsNone: "Sin proyectos",
+      projectsHint: "Con capital vigente",
+      projectsEmptyHint: "Explora el catálogo para empezar",
+    },
+
+    distribution: {
+      title: "Distribución de tu capital",
+      centerLabel: "Invertido actualmente",
+      empty: "Aún no tienes capital invertido",
+      emptyHint: "Cuando inviertas, aquí verás cómo se reparte tu capital",
+    },
+
+    contributions: {
+      title: "Tus últimos aportes",
+      // {amount} and {project} are replaced at render time.
+      item: "Invertiste {amount} en {project}",
+      empty: "Aún no tienes aportes registrados",
+      emptyHint: "Tus movimientos aparecerán aquí",
+    },
   },
 
   onboarding: {

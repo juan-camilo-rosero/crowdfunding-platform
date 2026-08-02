@@ -159,6 +159,13 @@ export type Database = {
             foreignKeyName: "capital_contributions_investor_id_fkey"
             columns: ["investor_id"]
             isOneToOne: false
+            referencedRelation: "investor_financial_summary"
+            referencedColumns: ["investor_id"]
+          },
+          {
+            foreignKeyName: "capital_contributions_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
             referencedRelation: "investor_totals"
             referencedColumns: ["investor_id"]
           },
@@ -229,6 +236,13 @@ export type Database = {
           visibility?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investor_financial_summary"
+            referencedColumns: ["investor_id"]
+          },
           {
             foreignKeyName: "documents_investor_id_fkey"
             columns: ["investor_id"]
@@ -626,6 +640,13 @@ export type Database = {
             foreignKeyName: "reassignment_requests_investor_id_fkey"
             columns: ["investor_id"]
             isOneToOne: false
+            referencedRelation: "investor_financial_summary"
+            referencedColumns: ["investor_id"]
+          },
+          {
+            foreignKeyName: "reassignment_requests_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
             referencedRelation: "investor_totals"
             referencedColumns: ["investor_id"]
           },
@@ -758,6 +779,13 @@ export type Database = {
             foreignKeyName: "transactions_investor_id_fkey"
             columns: ["investor_id"]
             isOneToOne: false
+            referencedRelation: "investor_financial_summary"
+            referencedColumns: ["investor_id"]
+          },
+          {
+            foreignKeyName: "transactions_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
             referencedRelation: "investor_totals"
             referencedColumns: ["investor_id"]
           },
@@ -828,6 +856,37 @@ export type Database = {
       }
     }
     Views: {
+      investor_financial_summary: {
+        Row: {
+          accumulated_return_pct: number | null
+          active_projects_count: number | null
+          capital_returned: number | null
+          current_capital: number | null
+          investor_id: string | null
+          total_contributed: number | null
+          yield_received: number | null
+        }
+        Relationships: []
+      }
+      investor_project_distribution: {
+        Row: {
+          current_capital: number | null
+          investor_id: string | null
+          project_id: string | null
+        }
+        Relationships: []
+      }
+      investor_project_position: {
+        Row: {
+          contributed: number | null
+          current_capital: number | null
+          investor_id: string | null
+          project_id: string | null
+          returned_capital: number | null
+          yield_received: number | null
+        }
+        Relationships: []
+      }
       investor_totals: {
         Row: {
           investor_id: string | null
