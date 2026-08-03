@@ -1,27 +1,60 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeftIcon, ClockIcon } from "lucide-react";
 import { es } from "@/i18n";
-import { formatCurrency } from "@/lib/format";
-import { INVESTOR_HOME_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
+import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { projectStatusLabel, projectTitle } from "@/lib/projects/labels";
-import { PageTitle } from "@/components/layout/PageTitle";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { ProjectGallery } from "@/components/project/ProjectGallery";
+import { ProjectSummary } from "@/components/project/ProjectSummary";
+import { ProjectProgress } from "@/components/project/ProjectProgress";
+import { ProjectReports } from "@/components/project/ProjectReports";
+import { ProjectDocuments } from "@/components/project/ProjectDocuments";
+import { InterestForm } from "@/components/project/InterestForm";
+import {
+  ProjectTabs,
+  type ProjectTabId,
+} from "@/components/project/ProjectTabs";
+import type { ReturnTerm } from "@/components/project/ReturnCalculator";
+
+/**
+ * MOCK terms for the return calculator.
+ *
+ * TODO(modelo de datos): terms and rate ranges are NOT in the schema. Adding
+ * them means new columns or a `project_return_terms` table, which is a data
+ * model decision rather than a UI one, so nothing was migrated. Once they
+ * exist, load them here alongside the project and pass them through unchanged —
+ * the calculator is already parameterised by props and knows nothing else.
+ *
+ * Ranges, never single rates: the screen must not imply a figure the investor
+ * will receive.
+ */
+const MOCK_RETURN_TERMS: ReturnTerm[] = [
+  { months: 6, annualMin: 0.08, annualMax: 0.12 },
+  { months: 12, annualMin: 0.1, annualMax: 0.15 },
+  { months: 18, annualMin: 0.11, annualMax: 0.16 },
+];
+
+/** Milestones pulled for the "Avance" timeline. */
+const MILESTONES_LIMIT = 30;
 
 /**
  * Project detail.
  *
- * SCAFFOLDING: the data layer and routing are final, the layout is not — the
- * designed screen (hero gallery, tabs for resumen/avance/reportes/documentos,
- * see views.md) comes later. What is already correct here is what it loads and
- * who is allowed to see it.
+ * Open to any onboarded user (proxy.ts lists /proyecto among the catalogue
+ * routes), so everything on it is public project information — except the
+ * "Mi inversión" tab.
  *
- * Access follows the catalogue rule: any onboarded user may open a project
- * (proxy.ts lists /proyecto under the catalogue paths), but the "your
- * investment" block only appears when the caller actually holds a position.
- * That block reads investor_project_position, whose RLS restricts rows to the
- * caller's own investor ids, so another investor's numbers can never surface
- * here even by guessing the URL.
+ * THAT TAB IS DECIDED HERE, ON THE SERVER, from the authenticated user's own
+ * position: the panel is only added to the array when they actually hold
+ * capital in THIS project. The client component receives a list of panels and
+ * cannot invent one, so there is no client-side condition to tamper with. The
+ * position comes from investor_project_distribution, whose RLS restricts rows
+ * to the caller's own investor ids, and the query is additionally scoped to
+ * those ids.
  */
 export default async function ProjectDetailPage({
   params,
@@ -57,76 +90,145 @@ export default async function ProjectDetailPage({
 
   const investorIds = (investorRows ?? []).map((row) => row.id);
 
-  const { data: positions } = investorIds.length
-    ? await supabase
-        .from("investor_project_position")
-        .select("contributed, returned_capital, yield_received, current_capital")
+  const [positionsResult, milestonesResult, reportsResult, documentsResult] =
+    await Promise.all([
+      investorIds.length
+        ? supabase
+            .from("investor_project_distribution")
+            .select("project_id")
+            .eq("project_id", id)
+            .in("investor_id", investorIds)
+        : Promise.resolve({ data: [] }),
+      supabase
+        .from("tasks")
+        .select("id, task, stage, status, estimated_date, actual_date")
         .eq("project_id", id)
-        .in("investor_id", investorIds)
-    : { data: [] };
+        .order("estimated_date", { ascending: true })
+        .limit(MILESTONES_LIMIT),
+      supabase
+        .from("monthly_reports")
+        .select("*")
+        .eq("project_id", id)
+        .order("report_month", { ascending: false }),
+      // RLS decides what comes back here; nothing is re-filtered client side.
+      supabase
+        .from("documents")
+        .select("id, name, doc_type, date, file_url")
+        .eq("project_id", id)
+        .order("date", { ascending: false }),
+    ]);
 
-  // A user may hold several investor rows; their position here is the sum.
-  const position = (positions ?? []).reduce(
-    (totals, row) => ({
-      contributed: totals.contributed + Number(row.contributed ?? 0),
-      returned: totals.returned + Number(row.returned_capital ?? 0),
-      yield: totals.yield + Number(row.yield_received ?? 0),
-      current: totals.current + Number(row.current_capital ?? 0),
-    }),
-    { contributed: 0, returned: 0, yield: 0, current: 0 }
-  );
+  const hasPosition = (positionsResult.data ?? []).length > 0;
 
-  const hasPosition = (positions ?? []).length > 0;
+  const milestones = (milestonesResult.data ?? []).map((row) => ({
+    id: row.id,
+    task: row.task ?? "",
+    stage: row.stage,
+    status: row.status,
+    // A finished task is dated by when it actually happened; a pending one by
+    // when it is expected.
+    date: row.actual_date ?? row.estimated_date,
+  }));
+
+  const reports = (reportsResult.data ?? []).map((row) => ({
+    id: row.id,
+    reportMonth: row.report_month,
+    physicalProgress: row.physical_progress,
+    financialProgress: row.financial_progress,
+    capitalUsedMonth: row.capital_used_month,
+    decisions: row.decisions,
+    risks: row.risks,
+    nextSteps: row.next_steps,
+    photos: row.photos,
+    reportPdfUrl: row.report_pdf_url,
+  }));
+
+  const documents = (documentsResult.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    docType: row.doc_type,
+    date: row.date,
+    fileUrl: row.file_url,
+  }));
+
+  const statusLabel = projectStatusLabel(project.status);
+  const subtitle =
+    project.progress !== null && project.progress !== undefined
+      ? es.projectDetail.statusWithProgress
+          .replace("{status}", statusLabel)
+          .replace("{progress}", String(Math.round(project.progress)))
+      : statusLabel;
+
+  const panels: { id: ProjectTabId; content: ReactNode }[] = [
+    {
+      id: "resumen",
+      content: (
+        <ProjectSummary
+          description={project.description}
+          sellingPoints={project.selling_points}
+          terms={MOCK_RETURN_TERMS}
+        />
+      ),
+    },
+    {
+      id: "avance",
+      content: (
+        <ProjectProgress progress={project.progress} milestones={milestones} />
+      ),
+    },
+    { id: "reportes", content: <ProjectReports reports={reports} /> },
+    { id: "documentos", content: <ProjectDocuments documents={documents} /> },
+  ];
+
+  // Conditional, and conditional on the SERVER: no position, no tab.
+  if (hasPosition) {
+    panels.push({
+      id: "mi-inversion",
+      content: (
+        <EmptyState
+          icon={<ClockIcon />}
+          title={es.projectDetail.myInvestment.soon}
+          hint={es.projectDetail.myInvestment.soonHint}
+        />
+      ),
+    });
+  }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <PageTitle>{project.name}</PageTitle>
-        <p className="text-sm text-zinc-500">
-          {projectTitle(project.type, project.city)}
-          {project.status ? ` · ${projectStatusLabel(project.status)}` : ""}
-        </p>
-      </div>
-
-      <p className="rounded-[10px] border border-neutral-200 bg-stone-50 px-6 py-4 text-sm text-zinc-500">
-        {es.projectDetail.notice}
-      </p>
-
-      <section className="flex flex-col gap-5 rounded-[10px] border border-neutral-200 bg-stone-50 p-6">
-        <h2 className="text-base font-medium text-stone-900">
-          {es.projectDetail.yourInvestment}
-        </h2>
-
-        {hasPosition ? (
-          <dl className="grid grid-cols-12 gap-5">
-            {[
-              { label: es.projectDetail.currentCapital, value: position.current },
-              { label: es.projectDetail.contributed, value: position.contributed },
-              { label: es.projectDetail.returned, value: position.returned },
-              { label: es.projectDetail.yield, value: position.yield },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="col-span-12 sm:col-span-6 xl:col-span-3"
-              >
-                <dt className="text-xs text-zinc-500">{item.label}</dt>
-                <dd className="text-2xl font-medium text-stone-900">
-                  {formatCurrency(item.value)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="text-sm text-zinc-500">{es.projectDetail.noPosition}</p>
-        )}
-      </section>
-
+    <div className="flex flex-col gap-6">
       <Link
-        href={INVESTOR_HOME_ROUTE}
-        className="w-fit cursor-pointer text-sm font-medium text-zinc-600 underline underline-offset-4"
+        href={CATALOG_ROUTE}
+        className="flex w-fit cursor-pointer items-center gap-2 text-sm text-neutral-400 transition-colors hover:text-zinc-600"
       >
-        {es.projectDetail.backToHome}
+        <ArrowLeftIcon className="size-4" aria-hidden="true" />
+        {es.projectDetail.back}
       </Link>
+
+      <ProjectGallery photos={project.main_photos} />
+
+      {/* 2/3 + 1/3. The columns stack under lg, where a sidebar beside the
+          content would leave both too narrow to read. */}
+      <div className="grid grid-cols-12 gap-6">
+        <div className="col-span-12 flex flex-col gap-6 lg:col-span-8">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl font-medium text-stone-900">
+              {projectTitle(project.type, project.city)}
+            </h1>
+            <p className="text-2xl text-zinc-500">{subtitle}</p>
+          </div>
+
+          <hr className="border-zinc-300" />
+
+          <ProjectTabs panels={panels} />
+        </div>
+
+        <aside className="col-span-12 lg:col-span-4">
+          {/* Sticky only where there is a column to be sticky in. */}
+          <div className="lg:sticky lg:top-6">
+            <InterestForm projectId={project.id} />
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

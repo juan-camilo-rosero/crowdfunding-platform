@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 // Feather icons (lucide-react is the maintained fork): folder, search.
 import { FolderIcon, SearchIcon } from "lucide-react";
@@ -13,9 +12,10 @@ import {
   sortCatalogProjects,
 } from "@/lib/projects/catalog";
 import { CLOSED_PROJECT_STATUSES } from "@/lib/projects/enums";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { CatalogProjectCard } from "@/components/cards/CatalogProjectCard";
-import { CatalogFilters } from "./CatalogFilters";
+import { ProjectFilterBar } from "@/components/filters/ProjectFilterBar";
 
 /** Upper bound for one page of the catalogue; the group is far from this. */
 const CATALOG_LIMIT = 200;
@@ -140,7 +140,14 @@ export default async function CatalogPage({
       ) : null}
 
       <div className="flex flex-col gap-5">
-        <CatalogFilters filters={filters} resultsCount={projects.length} />
+        <ProjectFilterBar
+          filters={filters}
+          countLabel={
+            projects.length === 1
+              ? es.catalog.resultsCountOne
+              : es.catalog.resultsCount.replace("{n}", String(projects.length))
+          }
+        />
 
         {projects.length === 0 ? (
           <EmptyCatalog isFiltered={isFiltered} />
@@ -180,36 +187,18 @@ export default async function CatalogPage({
  */
 function EmptyCatalog({ isFiltered }: { isFiltered: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 px-6 py-12 text-center">
-      <span
-        aria-hidden="true"
-        className="flex size-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
-      >
-        {isFiltered ? (
-          <SearchIcon className="size-5" />
-        ) : (
-          <FolderIcon className="size-5" />
-        )}
-      </span>
-      <div>
-        <p className="text-base font-medium text-stone-900">
-          {isFiltered ? es.catalog.emptyFiltered : es.catalog.empty}
-        </p>
-        <p className="mt-1 text-sm text-zinc-500">
-          {isFiltered ? es.catalog.emptyFilteredHint : es.catalog.emptyHint}
-        </p>
-      </div>
-
-      {/* The way out is offered here too, not only up in the filter bar: this
-          is where the user is looking when nothing came back. */}
-      {isFiltered ? (
-        <Link
-          href={CATALOG_ROUTE}
-          className="mt-1 flex h-10 cursor-pointer items-center justify-center rounded-[10px] bg-stone-900 px-5 text-base font-medium text-white transition-opacity hover:opacity-90"
-        >
-          {es.catalog.filters.clear}
-        </Link>
-      ) : null}
-    </div>
+    <EmptyState
+      icon={isFiltered ? <SearchIcon /> : <FolderIcon />}
+      title={isFiltered ? es.catalog.emptyFiltered : es.catalog.empty}
+      hint={isFiltered ? es.catalog.emptyFilteredHint : es.catalog.emptyHint}
+      // The way out is offered here too, not only up in the filter bar: this is
+      // where the user is looking when nothing came back. With no filters on
+      // there is nothing to clear, so no action is offered.
+      action={
+        isFiltered
+          ? { href: CATALOG_ROUTE, label: es.catalog.filters.clear }
+          : undefined
+      }
+    />
   );
 }

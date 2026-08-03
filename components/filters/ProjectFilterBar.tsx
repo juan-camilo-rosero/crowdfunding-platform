@@ -15,7 +15,7 @@ import {
   CATALOG_PARAMS,
   PROGRESS_RANGES,
   hasActiveFilters,
-  type CatalogFilters as CatalogFilterState,
+  type CatalogFilters,
 } from "@/lib/projects/catalog";
 import {
   PROJECT_CITIES,
@@ -26,21 +26,32 @@ import { projectStatusLabel } from "@/lib/projects/labels";
 import { Button } from "@/components/ui/button";
 import { FilterDropdown } from "@/components/filters/FilterDropdown";
 
-export type CatalogFiltersProps = {
-  filters: CatalogFilterState;
-  /** Projects currently listed, for the results counter. */
-  resultsCount: number;
+export type ProjectFilterBarProps = {
+  filters: CatalogFilters;
+  /**
+   * Results counter, already worded and formatted by the caller — the catalogue
+   * counts projects, "mis inversiones" counts positions.
+   */
+  countLabel: string;
 };
 
 /**
- * Filter bar of the catalogue.
+ * The four project filters plus the results counter.
+ *
+ * Shared by the catalogue (/portafolio) and "mis inversiones", which filter the
+ * same dimensions over the same `projects` columns; only the set being filtered
+ * differs. It reads its route from usePathname, so it rewrites whichever URL it
+ * happens to be rendered on without being told.
  *
  * It holds no state of its own: the URL is the state. Every change rewrites the
  * search params and the server component re-queries, which keeps a filtered
- * catalogue shareable, bookmarkable and correct after a reload or a back
- * button — there is no second copy of the selection to fall out of sync.
+ * screen shareable, bookmarkable and correct after a reload or a back button —
+ * there is no second copy of the selection to fall out of sync.
  */
-export function CatalogFilters({ filters, resultsCount }: CatalogFiltersProps) {
+export function ProjectFilterBar({
+  filters,
+  countLabel,
+}: ProjectFilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -63,13 +74,6 @@ export function CatalogFilters({ filters, resultsCount }: CatalogFiltersProps) {
     const query = params.toString();
     router.push(query ? `${pathname}?${query}` : pathname);
   }
-
-  const isFiltered = hasActiveFilters(filters);
-
-  const countLabel =
-    resultsCount === 1
-      ? es.catalog.resultsCountOne
-      : es.catalog.resultsCount.replace("{n}", String(resultsCount));
 
   return (
     <div className="flex flex-col gap-3">
@@ -125,7 +129,7 @@ export function CatalogFilters({ filters, resultsCount }: CatalogFiltersProps) {
         />
 
         {/* Only offered once there is something to clear. */}
-        {isFiltered ? (
+        {hasActiveFilters(filters) ? (
           <Button
             variant="ghost"
             size="sm"

@@ -1,11 +1,12 @@
 import { es } from "@/i18n";
-import { formatCurrency, formatPercent } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import {
   RETURN_TEXT_SIZE,
   projectTitle,
   resolveAgreedReturn,
 } from "@/lib/projects/labels";
 import { cn } from "@/lib/utils";
+import { ProjectCardBar } from "@/components/cards/ProjectCardBar";
 import { ProjectCardMedia } from "@/components/cards/ProjectCardMedia";
 import { ProjectCardShell } from "@/components/cards/ProjectCardShell";
 
@@ -22,10 +23,8 @@ export type ProjectInvestmentCardProps = {
   status: string | null;
   /** First entry of projects.main_photos; a placeholder shows when absent. */
   imageUrl?: string | null;
-  /** projects.fundraising_goal. Null hides the fundraising block. */
-  fundraisingGoal?: number | null;
-  /** Capital the PROJECT has raised, for the progress bar. */
-  capitalRaised?: number | null;
+  /** projects.progress, 0–100. Drives the work-progress bar. */
+  progress?: number | null;
   /** The investor's current capital in this project. */
   investedAmount: number;
   /**
@@ -53,21 +52,12 @@ export function ProjectInvestmentCard({
   city,
   status,
   imageUrl,
-  fundraisingGoal,
-  capitalRaised,
+  progress,
   investedAmount,
   agreedReturns = [],
   className,
 }: ProjectInvestmentCardProps) {
   const agreedReturn = resolveAgreedReturn(agreedReturns);
-
-  // The fundraising block only makes sense with a goal; without one the card
-  // shows a neutral line instead of a bar at a made-up percentage, which keeps
-  // every card structurally identical inside the grid.
-  const hasGoal = !!fundraisingGoal && fundraisingGoal > 0;
-  const raisedShare = hasGoal
-    ? Math.min(100, ((capitalRaised ?? 0) / fundraisingGoal) * 100)
-    : 0;
 
   return (
     <ProjectCardShell
@@ -86,31 +76,10 @@ export function ProjectInvestmentCard({
         </p>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        {hasGoal ? (
-          <>
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="truncate text-xs text-zinc-500">
-                {es.investmentCard.goal.replace(
-                  "{amount}",
-                  formatCurrency(fundraisingGoal)
-                )}
-              </p>
-              <p className="shrink-0 text-xs text-zinc-500">
-                {formatPercent(raisedShare)}
-              </p>
-            </div>
-            <div className="h-2 w-full rounded-md bg-zinc-100">
-              <div
-                className="h-2 rounded-md bg-amber-300"
-                style={{ width: `${raisedShare}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <p className="text-xs text-zinc-500">{es.investmentCard.noGoal}</p>
-        )}
-      </div>
+      {/* Work progress, never fundraising: on the investor's own screens the
+          question is how their project is coming along, not how much capital it
+          still needs. The catalogue's variant asks the other question. */}
+      <ProjectCardBar variant="progress" progress={progress} />
 
       <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
         <p

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  ArrowRightIcon,
   BuildingIcon,
   DollarSignIcon,
   FolderOpenIcon,
@@ -10,9 +11,14 @@ import {
 } from "lucide-react";
 import { es } from "@/i18n";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
-import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
+import {
+  CATALOG_ROUTE,
+  LOGIN_ROUTE,
+  MY_INVESTMENTS_ROUTE,
+} from "@/lib/auth/routes";
 import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { KpiCard } from "@/components/cards/KpiCard";
 import { ProjectInvestmentCard } from "@/components/cards/ProjectInvestmentCard";
@@ -27,6 +33,14 @@ import {
 
 /** How many contributions to pull; the list scrolls past the first few. */
 const CONTRIBUTIONS_LIMIT = 20;
+
+/**
+ * Positions shown in the home's preview. Three fills exactly one row of the
+ * grid (three per row on desktop), which is why the threshold is three rather
+ * than an arbitrary number: a fourth card would open a second, nearly empty row
+ * and turn the preview back into the full list it is meant not to be.
+ */
+const HOME_INVESTMENTS_PREVIEW = 3;
 
 function fill(template: string, values: Record<string, string>) {
   return Object.entries(values).reduce(
@@ -125,38 +139,25 @@ export default async function HomePage() {
   const { data: projectRows } = projectIds.length
     ? await supabase
         .from("projects")
-        .select("id, name, type, city, status, main_photos, fundraising_goal")
+        .select("id, name, type, city, status, main_photos, progress")
         .in("id", projectIds)
     : { data: [] };
 
-  // Raised capital per project (for the card's progress bar) and the agreed
-  // returns of this investor's contributions, used by "Mis inversiones".
+  // The agreed returns of THIS investor's contributions, for the position
+  // cards. No fundraising figure is needed: the personal-position card reports
+  // work progress, which travels on the project row itself.
   const investedProjectIds = distributionRows
     .map((row) => row.project_id)
     .filter((id): id is string => !!id);
 
-  const [totalsResult, contractsResult] = await Promise.all([
-    investedProjectIds.length
-      ? supabase
-          .from("project_totals")
-          .select("project_id, capital_received")
-          .in("project_id", investedProjectIds)
-      : Promise.resolve({ data: [] }),
+  const contractsResult =
     hasInvestorLink && investedProjectIds.length
-      ? supabase
+      ? await supabase
           .from("capital_contributions")
           .select("project_id, agreed_return")
           .in("investor_id", investorIds)
           .in("project_id", investedProjectIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const raisedByProject = new Map(
-    (totalsResult.data ?? []).map((row) => [
-      row.project_id,
-      Number(row.capital_received ?? 0),
-    ])
-  );
+      : { data: [] };
 
   const returnsByProject = new Map<string, (string | null)[]>();
   for (const row of contractsResult.data ?? []) {
@@ -177,6 +178,27 @@ export default async function HomePage() {
       label: projectsById.get(row.project_id as string)?.name ?? "—",
       value: Number(row.current_capital ?? 0),
     }));
+
+  /**
+   * The home shows a PREVIEW of the positions, not the whole list — that is
+   * what /mis-inversiones is for, and repeating it here would make the two
+   * screens the same screen.
+   *
+   * Which ones: the largest by current capital. On a screen whose job is the
+   * general picture, the positions that move the portfolio are the ones worth
+   * the space; "most recent" would surface a $500 contribution over a $50.000
+   * one. The donut right above is ordered by the same figure, so the preview
+   * reads as its top slices rather than an unrelated pick.
+   *
+   * Sorted on a copy: `segments` feeds the donut and must keep its own order.
+   */
+  const previewSegments = [...segments]
+    .sort((a, b) => b.value - a.value)
+    .slice(0, HOME_INVESTMENTS_PREVIEW);
+
+  // Below the threshold the preview IS the full list, so the link to the full
+  // screen would promise nothing new.
+  const hasMoreInvestments = segments.length > HOME_INVESTMENTS_PREVIEW;
 
   const timelineEntries: TimelineEntry[] = contributionRows.map((row) => ({
     id: row.id,
@@ -323,40 +345,41 @@ export default async function HomePage() {
           </section>
         </div>
 
-        {/* Row 3 — "Mis inversiones": three cards per row (col-span-4 of 12).
-            An incomplete last row keeps the card width and stays left-aligned,
-            which grid columns give for free. */}
+        {/* Row 3 — "Mis inversiones": a PREVIEW of the positions, three per row
+            (col-span-4 of 12). The full list lives in /mis-inversiones. */}
         <section className="flex flex-col gap-5">
-          <h2 className="text-2xl font-medium text-zinc-600">
-            {es.myInvestments.title}
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-2xl font-medium text-zinc-600">
+              {es.myInvestments.title}
+            </h2>
+
+            {/* In the header rather than under the cards: it stays reachable
+                without scrolling past the preview, and it never appears when
+                the preview already shows everything. */}
+            {hasMoreInvestments ? (
+              <Link
+                href={MY_INVESTMENTS_ROUTE}
+                className="flex cursor-pointer items-center gap-1 text-sm font-medium text-zinc-600 hover:text-stone-900"
+              >
+                {es.myInvestments.seeAll}
+                <ArrowRightIcon className="size-4" aria-hidden="true" />
+              </Link>
+            ) : null}
+          </div>
 
           {segments.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 px-6 py-12 text-center">
-              <span
-                aria-hidden="true"
-                className="flex size-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-500"
-              >
-                <FolderOpenIcon className="size-5" />
-              </span>
-              <div>
-                <p className="text-base font-medium text-stone-900">
-                  {es.myInvestments.empty}
-                </p>
-                <p className="mt-1 text-sm text-zinc-500">
-                  {es.myInvestments.emptyHint}
-                </p>
-              </div>
-              <Link
-                href={CATALOG_ROUTE}
-                className="mt-1 flex h-10 cursor-pointer items-center justify-center rounded-[10px] bg-stone-900 px-5 text-base font-medium text-white transition-opacity hover:opacity-90"
-              >
-                {es.myInvestments.emptyAction}
-              </Link>
-            </div>
+            <EmptyState
+              icon={<FolderOpenIcon />}
+              title={es.myInvestments.empty}
+              hint={es.myInvestments.emptyHint}
+              action={{
+                href: CATALOG_ROUTE,
+                label: es.myInvestments.emptyAction,
+              }}
+            />
           ) : (
             <div className="grid auto-rows-fr grid-cols-12 gap-5">
-              {segments.map((segment) => {
+              {previewSegments.map((segment) => {
                 const project = projectsById.get(segment.id);
                 return (
                   <div
@@ -370,8 +393,7 @@ export default async function HomePage() {
                       city={project?.city ?? null}
                       status={project?.status ?? null}
                       imageUrl={project?.main_photos?.[0] ?? null}
-                      fundraisingGoal={project?.fundraising_goal ?? null}
-                      capitalRaised={raisedByProject.get(segment.id) ?? 0}
+                      progress={project?.progress ?? null}
                       investedAmount={segment.value}
                       agreedReturns={returnsByProject.get(segment.id) ?? []}
                     />

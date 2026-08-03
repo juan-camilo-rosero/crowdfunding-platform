@@ -131,8 +131,8 @@ export const es = {
     resultsCountOne: "1 proyecto",
 
     // Card: public marketing figures of the project.
-    // {amount} is the fundraising goal, already formatted.
-    goal: "Meta de captación: US {amount}",
+    // Bar of the catalogue variant: how much of the goal is already raised.
+    raised: "Recaudado",
     notFundraising: "Sin captación abierta por ahora",
     // Caption under projects.offered_return. Deliberately says "ofrecido": it
     // is what the project offers to raise capital, NOT what any investor has
@@ -177,9 +177,9 @@ export const es = {
   },
 
   investmentCard: {
-    // {amount} is the fundraising goal, already formatted.
-    goal: "Objetivo: US {amount}",
-    noGoal: "Sin captación abierta",
+    // Bar of the personal-position variant: how the work is coming along.
+    workProgress: "Avance de obra",
+    noProgress: "Avance aún no reportado",
     expectedReturn: "Retorno esperado",
     expectedAnnualReturn: "Retorno anual esperado",
     // Shown when the position's contributions disagree on the agreed return.
@@ -190,22 +190,131 @@ export const es = {
 
   myInvestments: {
     title: "Mis inversiones",
+    // Home only: the home shows a preview, this leads to the full screen.
+    seeAll: "Ver todas mis inversiones",
+    // Dedicated screen only; the home section needs no subtitle.
+    subtitle:
+      "El detalle de cada proyecto en el que tienes capital: cuánto tienes, qué pactaste y cómo avanza la obra.",
     empty: "Aún no tienes inversiones activas",
     emptyHint:
       "Explora el portafolio de Investors 180 y encuentra un proyecto que te interese.",
     emptyAction: "Ver el portafolio",
+    // Filters are on, and this combination matches none of their projects.
+    emptyFiltered: "Ninguna de tus inversiones coincide con estos filtros",
+    emptyFilteredHint:
+      "Prueba con otra combinación o vuelve a ver todas tus inversiones.",
+    // {n} is replaced with the number of positions listed.
+    resultsCount: "{n} inversiones",
+    resultsCountOne: "1 inversión",
   },
 
   projectDetail: {
-    // Scaffolding only; the real layout comes later.
-    notice: "Pantalla en construcción. Los datos ya se cargan del proyecto real.",
-    yourInvestment: "Tu inversión en este proyecto",
-    currentCapital: "Capital vigente",
-    contributed: "Total aportado",
-    returned: "Capital devuelto",
-    yield: "Rendimiento recibido",
-    noPosition: "No tienes capital invertido en este proyecto.",
-    backToHome: "Volver a inicio",
+    back: "Volver al portafolio",
+    photoAlt: "Foto del proyecto",
+    // {n} is the photo number, for the alt text of the gallery.
+    photoAltNumbered: "Foto {n} del proyecto",
+    noPhotos: "Este proyecto aún no tiene fotos publicadas",
+    // Subtitle under the title. {status} and {progress} are filled at render.
+    statusWithProgress: "{status} - avance del {progress}%",
+
+    tabs: {
+      // Names the tab group for assistive tech, not shown on screen.
+      ariaLabel: "Secciones del proyecto",
+      summary: "Resumen",
+      progress: "Avance",
+      reports: "Reportes",
+      documents: "Documentos",
+      myInvestment: "Mi inversión",
+    },
+
+    summary: {
+      descriptionEmpty:
+        "Estamos preparando la descripción de este proyecto. Escríbenos y te contamos los detalles.",
+      sellingPoints: "Argumentos de venta",
+      sellingPointsEmpty:
+        "Aún no publicamos los argumentos de este proyecto. El equipo puede contártelos directamente.",
+    },
+
+    calculator: {
+      title: "Calcula tu rentabilidad estimada",
+      amountLabel: "¿Cuánto quieres invertir?",
+      amountPlaceholder: "10,000",
+      termLabel: "¿Por cuánto tiempo?",
+      // {n} is the number of months.
+      termMonths: "{n} meses",
+      totalLabel: "Rendimiento total estimado",
+      monthlyLabel: "Rendimiento mensual estimado",
+      // {min} and {max} are already formatted as currency.
+      range: "entre {min} y {max}",
+      chartTitle: "Acumulado mes a mes",
+      chartMin: "Escenario bajo",
+      chartMax: "Escenario alto",
+      // Never hidden: this is what keeps the simulation from reading as a promise.
+      disclaimer:
+        "Simulación ilustrativa. Los rendimientos son estimados, no constituyen una oferta ni una garantía de retorno.",
+      amountEmpty: "Escribe un monto para ver la estimación.",
+    },
+
+    interest: {
+      title: "Me interesa este proyecto",
+      subtitle: "Completa estos campos y te contactaremos pronto",
+      disclaimer:
+        "Enviar este formulario no constituye un compromiso de inversión",
+      amountLabel: "¿Cuánto te interesa invertir?",
+      amountPlaceholder: "Monto aproximado en USD",
+      commentsLabel: "¿Tienes algún comentario?",
+      commentsPlaceholder: "Cuéntanos qué te gustaría saber",
+      submit: "Enviar",
+      // Shown after the stub submit, until the real endpoint is wired up.
+      pending: "Enviando…",
+      mockNotice:
+        "El envío de este formulario se conecta en el siguiente sprint.",
+    },
+
+    progress: {
+      title: "Avance de obra",
+      // {n} is the percentage.
+      current: "El proyecto va en el {n}% de ejecución",
+      notReported: "El avance de obra aún no se ha reportado",
+      milestonesTitle: "Hitos de la obra",
+      milestonesEmpty: "Todavía no hay hitos registrados para este proyecto",
+      milestonesEmptyHint:
+        "Aparecerán aquí a medida que el equipo los reporte.",
+    },
+
+    reports: {
+      title: "Reportes mensuales",
+      empty: "Este proyecto aún no tiene reportes",
+      emptyHint:
+        "Publicamos un reporte por mes con el avance de obra y el uso del capital.",
+      physical: "Avance físico",
+      financial: "Avance financiero",
+      capitalUsed: "Capital usado en el mes",
+      decisions: "Decisiones",
+      risks: "Riesgos",
+      nextSteps: "Próximos pasos",
+      openPdf: "Ver reporte en PDF",
+      photoAlt: "Foto del reporte",
+    },
+
+    documents: {
+      title: "Documentos del proyecto",
+      empty: "Aún no hay documentos disponibles",
+      emptyHint:
+        "Cuando el equipo publique documentos de este proyecto, los verás aquí.",
+      open: "Abrir",
+      // Falls back when a document has no date recorded.
+      noDate: "Sin fecha",
+      // documents.name is nullable; the row still deserves a label.
+      untitled: "Documento sin nombre",
+    },
+
+    myInvestment: {
+      title: "Mi inversión en este proyecto",
+      soon: "Próximamente",
+      soonHint:
+        "Aquí verás el detalle de tu posición en este proyecto: tu capital, tus movimientos y tus documentos.",
+    },
   },
 
   account: {

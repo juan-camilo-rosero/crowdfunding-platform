@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { es } from "@/i18n";
+import { MY_INVESTMENTS_ROUTE } from "@/lib/auth/routes";
 
 export type NavItem = {
   href: string;
@@ -30,7 +31,7 @@ export type NavItem = {
 /** Requires the investor capability (a linked row in `investors`). */
 export const INVESTOR_NAV_ITEMS: NavItem[] = [
   { href: "/inicio", label: es.nav.home, icon: HomeIcon },
-  { href: "/mis-inversiones", label: es.nav.myInvestments, icon: LayoutGridIcon },
+  { href: MY_INVESTMENTS_ROUTE, label: es.nav.myInvestments, icon: LayoutGridIcon },
   { href: "/transacciones", label: es.nav.transactions, icon: CreditCardIcon },
   { href: "/documentos", label: es.nav.documents, icon: FileTextIcon },
   { href: "/solicitudes", label: es.nav.requests, icon: InboxIcon },

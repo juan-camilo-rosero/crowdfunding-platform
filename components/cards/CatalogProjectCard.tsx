@@ -1,8 +1,8 @@
 import { CheckIcon } from "lucide-react";
 import { es } from "@/i18n";
-import { formatCurrency, formatPercent } from "@/lib/format";
 import { RETURN_TEXT_SIZE, projectTitle } from "@/lib/projects/labels";
 import { cn } from "@/lib/utils";
+import { ProjectCardBar } from "@/components/cards/ProjectCardBar";
 import { ProjectCardMedia } from "@/components/cards/ProjectCardMedia";
 import { ProjectCardShell } from "@/components/cards/ProjectCardShell";
 
@@ -59,13 +59,6 @@ export function CatalogProjectCard({
   isInvested = false,
   className,
 }: CatalogProjectCardProps) {
-  // Without a goal there is no honest percentage to draw, so the card states
-  // the project is not raising instead of showing a bar at a made-up value.
-  const hasGoal = !!fundraisingGoal && fundraisingGoal > 0;
-  const raisedShare = hasGoal
-    ? Math.min(100, ((capitalRaised ?? 0) / fundraisingGoal) * 100)
-    : 0;
-
   const publishedReturn = offeredReturn?.trim();
 
   return (
@@ -92,31 +85,13 @@ export function CatalogProjectCard({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        {hasGoal ? (
-          <>
-            <div className="flex items-baseline justify-between gap-2">
-              <p className="truncate text-xs text-zinc-500">
-                {es.catalog.goal.replace(
-                  "{amount}",
-                  formatCurrency(fundraisingGoal)
-                )}
-              </p>
-              <p className="shrink-0 text-xs text-zinc-500">
-                {formatPercent(raisedShare)}
-              </p>
-            </div>
-            <div className="h-2 w-full rounded-md bg-zinc-100">
-              <div
-                className="h-2 rounded-md bg-amber-300"
-                style={{ width: `${raisedShare}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <p className="text-xs text-zinc-500">{es.catalog.notFundraising}</p>
-        )}
-      </div>
+      {/* Fundraising, never work progress: here the reader has not invested
+          yet, so the question is how much of the goal is still open. */}
+      <ProjectCardBar
+        variant="fundraising"
+        fundraisingGoal={fundraisingGoal}
+        capitalRaised={capitalRaised}
+      />
 
       {/* The return slot always occupies the same space so the cards line up,
           but a project with no published return says so plainly rather than

@@ -144,6 +144,49 @@ values
 -- -----------------------------------------------------------------------------
 
 -- -----------------------------------------------------------------------------
+-- MOCK photos, descriptions and selling points, for /proyecto/[id].
+--
+-- Applied over the REST API. `main_photos` points at the images already in
+-- public/carousel — they are placeholders standing in for the project-photos
+-- bucket, which is empty. Swap them for real bucket URLs when there are photos.
+--
+-- The counts differ ON PURPOSE, to exercise every branch of ProjectGallery:
+--   Villa Rotonda 118        5 photos  -> hero + full 2×2 grid
+--   Gulf Cove Multifamily 8  3 photos  -> hero + column of two
+--   Punta Gorda Duplex 24    2 photos  -> hero + one
+--   Rotonda Casa 210         1 photo   -> hero across the full width
+--   everything else          none      -> placeholder panel
+--
+-- `selling_points` is jsonb with no shape enforced by the schema; these use
+-- [{ "title": …, "body": … }], which is what lib/projects/selling-points.ts
+-- reads (it also accepts plain strings and Spanish keys).
+--
+-- Descriptions are two paragraphs separated by a blank line, as views.md asks:
+-- one that sells the property, one that reports its state.
+-- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
+-- MOCK investor with MANY positions — "Diversificado MOCK".
+--
+-- Exists to exercise the filter threshold of /mis-inversiones: the filter bar
+-- only appears from 7 positions, and no other mock investor reaches it. It holds
+-- 8 positions spread over 4 cities, 4 project types, 5 statuses and all four
+-- progress ranges, so every filter has something to bite on.
+--
+-- It has a real login so the screen can be seen as that investor:
+--   mock.diversificado@investors180.test / Mock-2026-Diversificado!
+--
+-- ⚠️ IT IS A PASSWORD ACCOUNT IN THE DATABASE. Delete it before going to
+-- production — it is mock data, not a real user:
+--
+--   delete from public.capital_contributions where comments like '[MOCK]%';
+--   delete from public.transactions where investor_id in (
+--     select id from public.investors where notes like '[MOCK] Inversionista con muchas%');
+--   delete from public.investors where notes like '[MOCK] Inversionista con muchas%';
+--   -- then remove the auth user from the Supabase dashboard (Auth → Users).
+-- -----------------------------------------------------------------------------
+
+-- -----------------------------------------------------------------------------
 -- MOCK capital_contributions for the developer's investor, added so the
 -- "Mis inversiones" cards show a real agreed return. They deliberately cover
 -- every branch of the resolution rule (lib/projects/labels.ts):
