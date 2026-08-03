@@ -107,8 +107,48 @@ export const es = {
   },
 
   catalog: {
-    title: "Portafolio Investors 180",
-    placeholder: "Pantalla temporal. Aquí va el catálogo de proyectos del grupo.",
+    title: "Portafolio Investors 180 Group",
+    // Sets the tone of the showcase: describes what the portfolio is, without
+    // figures, projections or any wording that could read as a return promise.
+    subtitle:
+      "Conoce los proyectos del grupo en Florida: en qué etapa está cada uno, cuánto capital busca y qué ofrece.",
+
+    filters: {
+      status: "Estado del proyecto",
+      city: "Ciudad",
+      type: "Tipo de proyecto",
+      progress: "Porcentaje de avance",
+      // Leading entry of each dropdown; turns that filter off.
+      allStatuses: "Todos los estados",
+      allCities: "Todas las ciudades",
+      allTypes: "Todos los tipos",
+      allProgress: "Todo el avance",
+      clear: "Limpiar filtros",
+    },
+
+    // {n} is replaced with the number of projects listed.
+    resultsCount: "{n} proyectos",
+    resultsCountOne: "1 proyecto",
+
+    // Card: public marketing figures of the project.
+    // {amount} is the fundraising goal, already formatted.
+    goal: "Meta de captación: US {amount}",
+    notFundraising: "Sin captación abierta por ahora",
+    // Caption under projects.offered_return. Deliberately says "ofrecido": it
+    // is what the project offers to raise capital, NOT what any investor has
+    // agreed to (that one lives in "mis inversiones").
+    offeredReturn: "Retorno ofrecido",
+    returnOnRequest: "Condiciones disponibles con el equipo",
+    alreadyInvested: "Ya inviertes aquí",
+
+    // No project matches the current filter combination.
+    emptyFiltered: "Ningún proyecto coincide con estos filtros",
+    emptyFilteredHint:
+      "Prueba con otra combinación o vuelve a ver todo el portafolio.",
+    // The rare case: the portfolio has no projects at all.
+    empty: "Aún no hay proyectos publicados",
+    emptyHint:
+      "Estamos preparando las próximas oportunidades. Vuelve pronto para conocerlas.",
   },
 
   projects: {

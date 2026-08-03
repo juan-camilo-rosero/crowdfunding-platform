@@ -1,5 +1,11 @@
 import type { Database } from "@/types/database";
 import type { TableColumn } from "@/lib/table/types";
+import {
+  PROJECT_CITIES,
+  PROJECT_COMPANIES,
+  PROJECT_STATUSES,
+  PROJECT_TYPES,
+} from "@/lib/projects/enums";
 
 /** Every admin tab must point at a table that actually exists in the schema. */
 type SupabaseTableName = keyof Database["public"]["Tables"];
@@ -35,34 +41,26 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
         key: "company",
         label: "Compañía",
         type: "select",
-        options: ["Investors 180 Group", "F1", "F3", "Otra LLC"],
+        options: [...PROJECT_COMPANIES],
       },
       { key: "address", label: "Dirección", type: "text", width: 240 },
       {
         key: "city",
         label: "Ciudad",
         type: "select",
-        options: ["Punta Gorda", "Rotonda", "North Port", "Otra"],
+        options: [...PROJECT_CITIES],
       },
       {
         key: "type",
         label: "Tipo",
         type: "select",
-        options: ["lote", "casa", "triplex", "multifamily"],
+        options: [...PROJECT_TYPES],
       },
       {
         key: "status",
         label: "Estado",
         type: "select",
-        options: [
-          "en evaluación",
-          "en reserva",
-          "permisos",
-          "construcción",
-          "vendido",
-          "rentado",
-          "pausado",
-        ],
+        options: [...PROJECT_STATUSES],
       },
       { key: "lot_value", label: "Valor del lote", type: "currency" },
       { key: "capital_required", label: "Capital requerido", type: "currency" },
@@ -74,6 +72,14 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
       { key: "deadline", label: "Fecha límite", type: "date" },
       { key: "in_fundraising", label: "En captación", type: "boolean" },
       { key: "fundraising_goal", label: "Meta de captación", type: "currency" },
+      // Public marketing return shown in the catalogue. NOT the per-investor
+      // agreed return, which lives in capital_contributions.
+      {
+        key: "offered_return",
+        label: "Retorno ofrecido",
+        type: "text",
+        width: 200,
+      },
       { key: "description", label: "Descripción", type: "longText" },
       { key: "drive_folder_url", label: "Carpeta Drive", type: "url" },
     ],

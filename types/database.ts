@@ -87,6 +87,13 @@ export type Database = {
             foreignKeyName: "budget_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "budget_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "project_totals"
             referencedColumns: ["project_id"]
           },
@@ -180,6 +187,13 @@ export type Database = {
             foreignKeyName: "capital_contributions_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "capital_contributions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "project_totals"
             referencedColumns: ["project_id"]
           },
@@ -256,6 +270,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "investors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "documents_project_id_fkey"
@@ -349,6 +370,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "investment_interests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
           {
             foreignKeyName: "investment_interests_project_id_fkey"
             columns: ["project_id"]
@@ -491,6 +519,13 @@ export type Database = {
             foreignKeyName: "monthly_reports_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
             referencedRelation: "project_totals"
             referencedColumns: ["project_id"]
           },
@@ -524,6 +559,7 @@ export type Database = {
           main_photos: string[] | null
           name: string
           next_step: string | null
+          offered_return: string | null
           progress: number | null
           responsible: string | null
           selling_points: Json | null
@@ -551,6 +587,7 @@ export type Database = {
           main_photos?: string[] | null
           name: string
           next_step?: string | null
+          offered_return?: string | null
           progress?: number | null
           responsible?: string | null
           selling_points?: Json | null
@@ -578,6 +615,7 @@ export type Database = {
           main_photos?: string[] | null
           name?: string
           next_step?: string | null
+          offered_return?: string | null
           progress?: number | null
           responsible?: string | null
           selling_points?: Json | null
@@ -626,6 +664,13 @@ export type Database = {
             foreignKeyName: "reassignment_requests_from_project_id_fkey"
             columns: ["from_project_id"]
             isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "reassignment_requests_from_project_id_fkey"
+            columns: ["from_project_id"]
+            isOneToOne: false
             referencedRelation: "project_totals"
             referencedColumns: ["project_id"]
           },
@@ -663,6 +708,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reassignment_requests_to_project_id_fkey"
+            columns: ["to_project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "reassignment_requests_to_project_id_fkey"
@@ -724,6 +776,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
           {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
@@ -795,6 +854,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "investors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
           },
           {
             foreignKeyName: "transactions_project_id_fkey"
@@ -892,6 +958,13 @@ export type Database = {
           investor_id: string | null
           total_committed: number | null
           total_received: number | null
+        }
+        Relationships: []
+      }
+      project_fundraising: {
+        Row: {
+          capital_raised: number | null
+          project_id: string | null
         }
         Relationships: []
       }
