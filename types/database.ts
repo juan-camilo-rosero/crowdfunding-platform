@@ -881,39 +881,54 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          city: string | null
+          city_place_id: string | null
+          country: string | null
           created_at: string
+          document_id: string | null
           email: string
           full_name: string | null
           id: string
           identity_verified: boolean
           onboarding_completed: boolean
           phone: string | null
+          phone_country_code: string | null
           role: string
           status: string
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          city?: string | null
+          city_place_id?: string | null
+          country?: string | null
           created_at?: string
+          document_id?: string | null
           email: string
           full_name?: string | null
           id: string
           identity_verified?: boolean
           onboarding_completed?: boolean
           phone?: string | null
+          phone_country_code?: string | null
           role?: string
           status?: string
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          city?: string | null
+          city_place_id?: string | null
+          country?: string | null
           created_at?: string
+          document_id?: string | null
           email?: string
           full_name?: string | null
           id?: string
           identity_verified?: boolean
           onboarding_completed?: boolean
           phone?: string | null
+          phone_country_code?: string | null
           role?: string
           status?: string
           updated_at?: string | null

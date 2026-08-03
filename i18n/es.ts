@@ -92,18 +92,51 @@ export const es = {
   },
 
   onboarding: {
-    title: "Onboarding",
-    status: "Estado",
-    onboardingCompleted: "Onboarding completado",
-    yes: "Sí",
-    no: "No",
-    // Temporary Sprint 1 button: stands in for the real personal-data form
-    // (full name, phone, city/country) built later.
-    temporaryNotice:
-      "Pantalla temporal. El formulario de datos personales se construye en el sprint de onboarding básico.",
-    completeData: "Completar datos (temporal)",
+    title: "Cuéntanos sobre ti",
+    subtitle: "Necesitamos algunos datos para completar tu perfil",
+    // Read-only line giving context; the email is not editable here.
+    signedInAs: "Estás usando",
+
+    fullNameLabel: "Nombre completo",
+    fullNamePlaceholder: "Como aparece en tu documento",
+    documentLabel: "Cédula o documento",
+    documentPlaceholder: "Solo números",
+    phoneLabel: "Teléfono",
+    phonePlaceholder: "300 123 4567",
+    cityLabel: "Ciudad",
+    cityPlaceholder: "Empieza a escribir tu ciudad",
+
+    submit: "Continuar",
     saving: "Guardando…",
     saveError: "No pudimos guardar tus datos. Inténtalo de nuevo.",
+
+    country: {
+      selectLabel: "Selecciona tu país",
+      searchPlaceholder: "Busca un país",
+      noResults: "Ningún país coincide",
+    },
+
+    city: {
+      searching: "Buscando ciudades…",
+      noResults: "No encontramos esa ciudad",
+      error: "No pudimos buscar ciudades ahora.",
+      retry: "Reintentar",
+      // Required by the Places API (New) when predictions show without a map.
+      attribution: "Powered by Google",
+    },
+
+    errors: {
+      fullNameShort: "Escribe tu nombre completo (mínimo 2 caracteres).",
+      fullNameLong: "Ese nombre es demasiado largo.",
+      fullNameFormat: "El nombre solo puede tener letras, espacios y guiones.",
+      documentFormat: "El documento solo puede tener números, sin puntos ni espacios.",
+      documentLength: "El documento debe tener entre 6 y 12 dígitos.",
+      phoneCountry: "Selecciona un país válido.",
+      phoneFormat: "El teléfono solo puede tener números, sin espacios ni guiones.",
+      phoneLength: "El teléfono debe tener entre 6 y 15 dígitos.",
+      cityRequired: "Selecciona tu ciudad.",
+      citySelect: "Elige una ciudad de la lista para continuar.",
+    },
   },
 
   catalog: {
