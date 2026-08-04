@@ -241,6 +241,51 @@ export const es = {
     resultsCountOne: "1 inversión",
   },
 
+  transactions: {
+    title: "Transacciones",
+    // Frames the table as a record of what happened, with no editorialising.
+    subtitle: "El registro de los movimientos de tu capital, del más reciente al más antiguo.",
+
+    columns: {
+      date: "Fecha",
+      project: "Proyecto",
+      type: "Tipo",
+      amount: "Monto",
+    },
+
+    // Display labels for the four values stored in transactions.type. Earnings
+    // and capital returns stay separate, never merged (CLAUDE.md).
+    type: {
+      aporte: "Aporte",
+      rendimiento: "Rendimiento",
+      "devolución de capital": "Devolución de capital",
+      reasignación: "Reasignación",
+    } as Record<string, string>,
+
+    filters: {
+      project: "Proyecto",
+      type: "Tipo de movimiento",
+      allProjects: "Todos los proyectos",
+      allTypes: "Todos los movimientos",
+      clear: "Limpiar filtros",
+    },
+
+    // {n} is replaced with the number of rows listed.
+    resultsCount: "{n} movimientos",
+    resultsCountOne: "1 movimiento",
+
+    tableCaption: "Tus movimientos de capital",
+
+    empty: "Aún no tienes movimientos registrados",
+    emptyHint:
+      "Aquí aparecerán tus aportes, rendimientos y devoluciones de capital en cuanto se registren.",
+    emptyFiltered: "Ningún movimiento coincide con estos filtros",
+    emptyFilteredHint: "Prueba con otra combinación o vuelve a ver todos tus movimientos.",
+
+    loadError: "No pudimos cargar tus movimientos.",
+    retry: "Reintentar",
+  },
+
   projectDetail: {
     back: "Volver al portafolio",
     photoAlt: "Foto del proyecto",

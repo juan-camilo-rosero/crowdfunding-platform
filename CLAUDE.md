@@ -40,9 +40,21 @@ npm run dev         # desarrollo local
 npm run build       # build de producción
 npm run lint        # ESLint
 npm run typecheck   # tsc --noEmit
+npm test            # Vitest (una pasada)
+npm run test:watch  # Vitest en watch
 ```
 
 - YOU MUST correr `npm run typecheck` y `npm run lint` después de cualquier serie de cambios.
+
+### Testing (Vitest + React Testing Library)
+
+Config en `vitest.config.mts` (**la extensión `.mts` es obligatoria**: `vite-tsconfig-paths` es ESM-only y el proyecto no tiene `"type": "module"`, así que un `.ts` se carga como CJS y revienta). Setup global en `vitest.setup.ts`.
+
+- Entorno `jsdom`. **Fijado en jsdom 26**: la 30 exige Node 22 y este equipo corre Node 20.
+- El alias `@/` sale del `tsconfig.json` vía `vite-tsconfig-paths`; no hay un segundo mapeo que mantener sincronizado.
+- Los tests viven junto al código que prueban (`lib/transactions/query.test.ts`), no en una carpeta aparte.
+- **Qué se testea: nuestra lógica.** Scoping de datos, filtros, formateo y render. Nada de internals de terceros (Supabase, Recharts, el router de Next) ni snapshots trivales.
+- Para probar consultas, mockear el cliente de Supabase con un builder encadenable que registre las llamadas. El test que nunca debe faltar en una vista privada: que la consulta **siempre** aplique el scope del `investor_id`/`auth.uid()` del usuario actual, pase lo que pase por los filtros.
 - Los tipos de TypeScript en `types/` mapean 1:1 con las tablas de la base.
 
 ### Manejo del dev server (IMPORTANTE — Turbopack corrompe su caché)
