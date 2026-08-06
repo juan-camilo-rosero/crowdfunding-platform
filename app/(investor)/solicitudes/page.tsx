@@ -8,6 +8,11 @@ import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { parseRequestFilters } from "@/lib/requests/params";
 import {
+  getReassignablePositions,
+  getReassignmentDestinations,
+  type AvailabilityClient,
+} from "@/lib/requests/availability";
+import {
   fetchInvestorRequests,
   fetchRequestFilterOptions,
   type RequestsClient,
@@ -18,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
+import { ReassignmentRequestModal } from "./ReassignmentRequestModal";
 import { RequestFilters } from "./RequestFilters";
 
 /**
@@ -68,10 +74,20 @@ export default async function RequestsPage({
   const investorIds = (investorRows ?? []).map((row) => row.id);
 
   const client = supabase as unknown as RequestsClient;
-  const [result, options] = await Promise.all([
+  const availabilityClient = supabase as unknown as AvailabilityClient;
+
+  const [result, options, positions, destinations] = await Promise.all([
     fetchInvestorRequests(client, investorIds, filters),
     fetchRequestFilterOptions(client, investorIds),
+    // Options for the "nueva solicitud" form. UX only — the Server Action
+    // re-reads both before writing, so these can never widen what is accepted.
+    getReassignablePositions(availabilityClient, investorIds),
+    getReassignmentDestinations(availabilityClient),
   ]);
+
+  // Only someone with an investor link has capital to reassign; an admin
+  // without one sees no button, which is the correct answer for them.
+  const canCreateRequest = investorIds.length > 0;
 
   const failed = result.failed || options.failed;
   const rows = result.requests as unknown as TableRow[];
@@ -87,11 +103,20 @@ export default async function RequestsPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <PageTitle>{es.requests.title}</PageTitle>
-        <p className="max-w-2xl text-base text-ink-500">
-          {es.requests.subtitle}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <PageTitle>{es.requests.title}</PageTitle>
+          <p className="max-w-2xl text-base text-ink-500">
+            {es.requests.subtitle}
+          </p>
+        </div>
+
+        {canCreateRequest ? (
+          <ReassignmentRequestModal
+            sources={positions.sources}
+            destinations={destinations.destinations}
+          />
+        ) : null}
       </div>
 
       {failed ? (

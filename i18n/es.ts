@@ -398,6 +398,58 @@ export const es = {
 
     loadError: "No pudimos cargar tus solicitudes.",
     retry: "Reintentar",
+
+    // ---- Creating a request -------------------------------------------------
+    create: {
+      open: "Nueva solicitud",
+      title: "Nueva solicitud de reasignación",
+      description:
+        "Pide mover capital de un proyecto a otro. El equipo de Investors 180 revisará tu solicitud.",
+
+      fromLabel: "Proyecto de origen",
+      fromPlaceholder: "Elige de dónde sale el capital",
+      toLabel: "Proyecto de destino",
+      toPlaceholder: "Elige a dónde quieres moverlo",
+      amountLabel: "Monto a reasignar",
+      amountPlaceholder: "0",
+      // {amount} is replaced with the formatted available capital.
+      available: "Disponible: {amount}",
+      availableHint:
+        "Es tu capital vigente en ese proyecto, menos lo que ya tienes en solicitudes pendientes.",
+
+      submit: "Enviar solicitud",
+      submitting: "Enviando…",
+      cancel: "Cancelar",
+
+      // Legal framing. Sending this is a REQUEST, not a transfer.
+      footnote:
+        "Esta solicitud será revisada por el equipo de Investors 180. Enviarla no reasigna tu capital de inmediato.",
+
+      noCapital: "No tienes capital disponible para reasignar",
+      noCapitalHint:
+        "Cuando tengas capital vigente en algún proyecto podrás pedir moverlo desde aquí.",
+      noDestinations: "No hay proyectos disponibles como destino por ahora",
+
+      success: "Tu solicitud quedó registrada y está pendiente de revisión.",
+    },
+
+    errors: {
+      sameProject: "El origen y el destino deben ser proyectos distintos.",
+      fromRequired: "Elige el proyecto de origen.",
+      toRequired: "Elige el proyecto de destino.",
+      amountPositive: "El monto debe ser mayor que cero.",
+      amountNumber: "El monto solo puede tener números.",
+      // {amount} is replaced with the formatted available capital.
+      amountTooHigh: "El monto supera tu capital disponible ({amount}).",
+      invalidSource: "Ese proyecto de origen no está disponible para reasignar.",
+      invalidDestination: "Ese proyecto no puede recibir capital ahora mismo.",
+      notInvestor: "Tu cuenta no tiene inversiones vinculadas.",
+      saveFailed: "No pudimos registrar tu solicitud. Inténtalo de nuevo.",
+    },
+  },
+
+  common: {
+    cancel: "Cancelar",
   },
 
   projectDetail: {
