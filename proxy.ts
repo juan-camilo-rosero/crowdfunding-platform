@@ -88,6 +88,18 @@ export async function proxy(request: NextRequest) {
 
   // Second query (profile): real authorization also lives in the backend and in
   // RLS; this proxy is the first barrier, not the only one (see code-patterns.md).
+  //
+  // The investor-link query is STARTED here rather than awaited later. Both are
+  // round trips to a database several thousand km away (~170ms each), and
+  // running them back to back doubled that for every navigation to an investor
+  // route. The promise is created eagerly and awaited only where it is needed,
+  // so paths that never ask still pay nothing extra — they just discard it.
+  const investorLinkPromise = supabase
+    .from("investors")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1);
+
   const { data: profile } = await supabase
     .from("users")
     .select("role, status, onboarding_completed")
@@ -121,19 +133,16 @@ export async function proxy(request: NextRequest) {
 
   const isAdmin = role === "admin";
 
-  // Investor capability is derived from the link in `investors`. Resolved lazily
-  // so the extra query only runs on the requests that actually need it.
+  // Investor capability is derived from the link in `investors`. The query was
+  // issued above, in parallel with the profile; this only awaits its result.
+  //
+  // The explicit user_id filter on it is required: RLS lets an admin read every
+  // investors row, so without it every admin would look like an investor.
   let investorLinkChecked = false;
   let investorLinked = false;
   const isInvestor = async () => {
     if (!investorLinkChecked) {
-      // Explicit user_id filter is required: RLS lets an admin read every
-      // investors row, so without it every admin would look like an investor.
-      const { data } = await supabase
-        .from("investors")
-        .select("id")
-        .eq("user_id", user.id)
-        .limit(1);
+      const { data } = await investorLinkPromise;
       investorLinked = !!data && data.length > 0;
       investorLinkChecked = true;
     }

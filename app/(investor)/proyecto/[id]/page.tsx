@@ -4,7 +4,10 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
-import { getCurrentUserProfile } from "@/lib/auth/session";
+import {
+  getCurrentUserProfile,
+  getInvestorIds,
+} from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { projectStatusLabel, projectTitle } from "@/lib/projects/labels";
 import { ProjectGallery } from "@/components/project/ProjectGallery";
@@ -82,13 +85,8 @@ export default async function ProjectDetailPage({
   if (!project) {
     notFound();
   }
-
-  const { data: investorRows } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", profile.id);
-
-  const investorIds = (investorRows ?? []).map((row) => row.id);
+  // One cached read per request, shared with the layout's sidebar check.
+  const investorIds = await getInvestorIds();
 
   const [positionsResult, milestonesResult, reportsResult, documentsResult] =
     await Promise.all([

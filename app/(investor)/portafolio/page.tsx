@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { FolderIcon, SearchIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
-import { getCurrentUserProfile } from "@/lib/auth/session";
+import {
+  getCurrentUserProfile,
+  getInvestorIds,
+} from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import {
   findProgressRange,
@@ -99,16 +102,8 @@ export default async function CatalogPage({
       Number(row.capital_raised ?? 0),
     ])
   );
-
-  // Which of these projects the CALLER already holds capital in. Their own data
-  // and nobody else's: scoped to their investor ids, and skipped when they have
-  // no investor link.
-  const { data: investorRows } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", profile.id);
-
-  const investorIds = (investorRows ?? []).map((row) => row.id);
+  // One cached read per request, shared with the layout's sidebar check.
+  const investorIds = await getInvestorIds();
 
   const { data: ownPositions } = investorIds.length && projectIds.length
     ? await supabase

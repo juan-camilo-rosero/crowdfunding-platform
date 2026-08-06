@@ -4,7 +4,10 @@ import { FileTextIcon, SearchIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { formatDate } from "@/lib/format";
 import { LOGIN_ROUTE, TRANSACTIONS_ROUTE } from "@/lib/auth/routes";
-import { getCurrentUserProfile } from "@/lib/auth/session";
+import {
+  getCurrentUserProfile,
+  getInvestorIds,
+} from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { parseTransactionFilters } from "@/lib/transactions/params";
 import {
@@ -64,15 +67,8 @@ export default async function TransactionsPage({
 
   const filters = parseTransactionFilters(await searchParams);
   const supabase = await createClient();
-
-  // The investor rows linked to THIS user. RLS restricts the read to their own;
-  // the explicit user_id filter is the second barrier.
-  const { data: investorRows } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", profile.id);
-
-  const investorIds = (investorRows ?? []).map((row) => row.id);
+  // One cached read per request, shared with the layout's sidebar check.
+  const investorIds = await getInvestorIds();
 
   const client = supabase as unknown as TransactionsClient;
   const [result, options] = await Promise.all([

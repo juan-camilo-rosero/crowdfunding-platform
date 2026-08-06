@@ -448,6 +448,64 @@ export const es = {
     },
   },
 
+  adminUsers: {
+    title: "Usuarios sin vincular",
+    subtitle:
+      "Personas con cuenta y onboarding completo que todavía no tienen ficha de inversionista.",
+
+    columns: {
+      name: "Nombre",
+      email: "Correo",
+      registered: "Registrado",
+      action: "Acción",
+    },
+
+    noName: "Sin nombre",
+    // Badge on the row: an unlinked record with this email already exists.
+    hasProspect: "Prospecto en pipeline",
+
+    searchPlaceholder: "Busca por nombre o correo",
+    // {n} is replaced with the number of users listed.
+    resultsCount: "{n} usuarios",
+    resultsCountOne: "1 usuario",
+    tableCaption: "Usuarios pendientes de vincular como inversionistas",
+
+    convert: "Convertir en inversionista",
+    converting: "Convirtiendo…",
+
+    confirmTitle: "Convertir en inversionista",
+    // Deliberately sober: this only enables the record, it says nothing about
+    // anyone having invested.
+    confirmDescription:
+      "Se habilitará la ficha de inversionista de esta persona. No registra ningún aporte ni cambia su rol.",
+    // {name} and {email} are replaced at render time.
+    confirmPerson: "{name} · {email}",
+    confirmWithProspect:
+      "Existe un prospecto con este correo en el pipeline. Se conectará esa ficha a esta cuenta.",
+    confirmWithoutProspect:
+      "Se creará una ficha de inversionista para esta persona.",
+
+    successConnected: "Conectamos el prospecto existente a esta cuenta.",
+    successCreated: "Creamos la ficha de inversionista.",
+
+    empty: "No hay usuarios pendientes por vincular",
+    emptyHint: "Cuando alguien se registre y complete su onboarding, aparecerá aquí.",
+    emptySearch: "Ningún usuario coincide con la búsqueda",
+    emptySearchHint: "Prueba con otro nombre o correo.",
+
+    loadError: "No pudimos cargar los usuarios.",
+    retry: "Reintentar",
+
+    errors: {
+      notAdmin: "No tienes permiso para hacer esto.",
+      notFound: "No encontramos a esa persona.",
+      isAdmin: "No se puede convertir a un administrador desde aquí.",
+      onboardingPending: "Esa persona todavía no completó su onboarding.",
+      alreadyInvestor: "Esa persona ya está vinculada como inversionista.",
+      failed: "No pudimos completar la conversión. Inténtalo de nuevo.",
+    },
+  },
+
   common: {
     cancel: "Cancelar",
   },

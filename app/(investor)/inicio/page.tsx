@@ -16,7 +16,10 @@ import {
   LOGIN_ROUTE,
   MY_INVESTMENTS_ROUTE,
 } from "@/lib/auth/routes";
-import { getCurrentUserProfile } from "@/lib/auth/session";
+import {
+  getCurrentUserProfile,
+  getInvestorIds,
+} from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -64,15 +67,8 @@ export default async function HomePage() {
   }
 
   const supabase = await createClient();
-
-  // The investor rows linked to this user. RLS already restricts this to their
-  // own; the ids are then used to scope every other query explicitly.
-  const { data: investorRows } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", profile.id);
-
-  const investorIds = (investorRows ?? []).map((row) => row.id);
+  // One cached read per request, shared with the layout's sidebar check.
+  const investorIds = await getInvestorIds();
   const hasInvestorLink = investorIds.length > 0;
 
   const [summaryResult, distributionResult, contributionsResult] =

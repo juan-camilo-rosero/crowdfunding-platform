@@ -7,7 +7,10 @@ import {
   LOGIN_ROUTE,
   MY_INVESTMENTS_ROUTE,
 } from "@/lib/auth/routes";
-import { getCurrentUserProfile } from "@/lib/auth/session";
+import {
+  getCurrentUserProfile,
+  getInvestorIds,
+} from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import {
   findProgressRange,
@@ -57,15 +60,8 @@ export default async function MyInvestmentsPage({
   const isFiltered = hasActiveFilters(filters);
 
   const supabase = await createClient();
-
-  // The investor rows linked to this user. RLS already restricts this to their
-  // own; the ids then scope every other query explicitly.
-  const { data: investorRows } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", profile.id);
-
-  const investorIds = (investorRows ?? []).map((row) => row.id);
+  // One cached read per request, shared with the layout's sidebar check.
+  const investorIds = await getInvestorIds();
   const hasInvestorLink = investorIds.length > 0;
 
   // Positions with capital still working. A fully returned position is history,

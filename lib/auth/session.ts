@@ -1,19 +1,45 @@
 import { cache } from "react";
-import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUser, type VerifiedUser } from "@/lib/auth/claims";
 import type { UserCapabilities } from "@/lib/auth/routes";
 import { isRole, isUserStatus, type Role, type UserProfile } from "@/types/user";
 
-/** Authenticated user per Supabase Auth, or null. Memoized per request. */
-export const getCurrentUser = cache(async (): Promise<User | null> => {
+/**
+ * Authenticated user, or null. Memoized per request.
+ *
+ * Verifies the JWT signature locally rather than asking the Auth server, which
+ * removes a ~170ms round trip from every render. proxy.ts has already refreshed
+ * the session by the time this runs, so there is nothing to renew here — only
+ * to verify. See lib/auth/claims.ts for why this is not `getSession()`.
+ */
+export const getCurrentUser = cache(async (): Promise<VerifiedUser | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  return getVerifiedUser(supabase);
+});
 
-  if (error || !user) return null;
-  return user;
+/**
+ * The investor rows linked to the current user.
+ *
+ * Memoized per request, and the ONE place that asks. The layout needs it to
+ * decide the sidebar and most investor screens need the ids to scope their
+ * queries; before this they each ran their own copy of the same query, paying
+ * the round trip twice on every navigation.
+ *
+ * The explicit user_id filter matters: RLS lets an admin read every investors
+ * row, so without it an admin would look like an investor.
+ */
+export const getInvestorIds = cache(async (): Promise<string[]> => {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("investors")
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (error || !data) return [];
+  return data.map((row) => row.id);
 });
 
 /**
@@ -51,18 +77,7 @@ export async function isAdmin(): Promise<boolean> {
  * row, so without it an admin would look like an investor.
  */
 export const isInvestor = cache(async (): Promise<boolean> => {
-  const user = await getCurrentUser();
-  if (!user) return false;
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("investors")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  if (error || !data) return false;
-  return data.length > 0;
+  return (await getInvestorIds()).length > 0;
 });
 
 /** All capabilities at once, for sidebar rendering and landing decisions. */
