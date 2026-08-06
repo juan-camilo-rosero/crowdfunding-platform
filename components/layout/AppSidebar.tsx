@@ -40,7 +40,10 @@ export async function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="gap-4 p-4">
         <div className="flex items-center justify-between gap-2">
-          <BrandLogo className="min-w-0 flex-1 justify-start" />
+          <BrandLogo
+            className="min-w-0 flex-1 justify-start"
+            imageClassName="h-14"
+          />
           <SidebarTrigger aria-label={es.nav.toggleSidebar} />
         </div>
 

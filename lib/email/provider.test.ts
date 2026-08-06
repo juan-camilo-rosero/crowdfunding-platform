@@ -46,10 +46,11 @@ describe("provider selection", () => {
     expect(getEmailProvider().name).toBe("resend");
   });
 
-  it("degrades to a no-op when the key is set but EMAIL_FROM is missing", () => {
-    // A half-configured provider must not become a runtime error at send time.
+  it("still sends with only a key, falling back to the sandbox sender", () => {
+    // Requiring EMAIL_FROM used to disable mail entirely for a deployment that
+    // had set nothing but the key — the least useful default available.
     setEnv({ RESEND_API_KEY: "re_test" });
-    expect(getEmailProvider().name).toBe("noop");
+    expect(getEmailProvider().name).toBe("resend");
   });
 
   it("honours an explicit opt-out even with credentials present", () => {
