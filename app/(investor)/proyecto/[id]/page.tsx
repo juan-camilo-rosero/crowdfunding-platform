@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeftIcon, ClockIcon } from "lucide-react";
+import { ArrowLeftIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { projectStatusLabel, projectTitle } from "@/lib/projects/labels";
-import { EmptyState } from "@/components/layout/EmptyState";
 import { ProjectGallery } from "@/components/project/ProjectGallery";
 import { ProjectSummary } from "@/components/project/ProjectSummary";
 import { ProjectProgress } from "@/components/project/ProjectProgress";
 import { ProjectReports } from "@/components/project/ProjectReports";
 import { ProjectDocuments } from "@/components/project/ProjectDocuments";
 import { InterestForm } from "@/components/project/InterestForm";
+import { ProjectMyInvestment } from "@/components/project/ProjectMyInvestment";
 import {
   ProjectTabs,
   type ProjectTabId,
@@ -92,10 +92,13 @@ export default async function ProjectDetailPage({
 
   const [positionsResult, milestonesResult, reportsResult, documentsResult] =
     await Promise.all([
+      // The FULL position, not merely whether one exists: the same read both
+      // decides the tab and feeds it, so the panel can never be shown with
+      // figures that were fetched under a different condition.
       investorIds.length
         ? supabase
-            .from("investor_project_distribution")
-            .select("project_id")
+            .from("investor_project_position")
+            .select("contributed, returned_capital, yield_received, current_capital")
             .eq("project_id", id)
             .in("investor_id", investorIds)
         : Promise.resolve({ data: [] }),
@@ -118,7 +121,75 @@ export default async function ProjectDetailPage({
         .order("date", { ascending: false }),
     ]);
 
-  const hasPosition = (positionsResult.data ?? []).length > 0;
+  // A user may hold several investor rows; their position here is the sum.
+  const positionRows = (positionsResult.data ?? []) as {
+    contributed: number | string | null;
+    returned_capital: number | string | null;
+    yield_received: number | string | null;
+    current_capital: number | string | null;
+  }[];
+
+  const position = positionRows.reduce(
+    (totals, row) => ({
+      contributed: totals.contributed + Number(row.contributed ?? 0),
+      returnedCapital: totals.returnedCapital + Number(row.returned_capital ?? 0),
+      yieldReceived: totals.yieldReceived + Number(row.yield_received ?? 0),
+      currentCapital: totals.currentCapital + Number(row.current_capital ?? 0),
+    }),
+    { contributed: 0, returnedCapital: 0, yieldReceived: 0, currentCapital: 0 }
+  );
+
+  const hasPosition = positionRows.length > 0;
+
+  // Only fetched when there is a position to describe, and scoped to the same
+  // investor ids: the contribution breakdown and the project's total received
+  // capital, which is the denominator of the share.
+  const [contributionsResult, totalsResult] = await Promise.all([
+    hasPosition
+      ? supabase
+          .from("capital_contributions")
+          // amount_received, not amount_committed: this table is the breakdown
+          // of money actually in, which is what the position is built from.
+          .select("id, received_date, amount_received, capital_type, agreed_return, term, status")
+          .eq("project_id", id)
+          .in("investor_id", investorIds)
+          .order("received_date", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    hasPosition
+      ? supabase
+          .from("project_totals")
+          .select("capital_received")
+          .eq("project_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const contributions = ((contributionsResult.data ?? []) as {
+    id: string;
+    received_date: string | null;
+    amount_received: number | string | null;
+    capital_type: string | null;
+    agreed_return: string | null;
+    term: string | null;
+    status: string | null;
+  }[]).map((row) => ({
+    id: row.id,
+    receivedDate: row.received_date,
+    amount: Number(row.amount_received ?? 0),
+    capitalType: row.capital_type,
+    // Verbatim; never parsed or normalised.
+    agreedReturn: row.agreed_return,
+    term: row.term,
+    status: row.status,
+  }));
+
+  const projectCapitalReceived =
+    (totalsResult.data as { capital_received: number | string | null } | null)
+      ?.capital_received != null
+      ? Number(
+          (totalsResult.data as { capital_received: number | string }).capital_received
+        )
+      : null;
 
   const milestones = (milestonesResult.data ?? []).map((row) => ({
     id: row.id,
@@ -185,10 +256,10 @@ export default async function ProjectDetailPage({
     panels.push({
       id: "mi-inversion",
       content: (
-        <EmptyState
-          icon={<ClockIcon />}
-          title={es.projectDetail.myInvestment.soon}
-          hint={es.projectDetail.myInvestment.soonHint}
+        <ProjectMyInvestment
+          position={position}
+          contributions={contributions}
+          projectCapitalReceived={projectCapitalReceived}
         />
       ),
     });

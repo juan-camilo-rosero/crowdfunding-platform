@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -15,6 +16,19 @@ import tsconfigPaths from "vite-tsconfig-paths";
  */
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
+  resolve: {
+    alias: {
+      // `server-only` throws unless it is resolved inside a React Server
+      // Component, which Vitest is not. Stubbing it here lets server modules be
+      // unit-tested; the real guard still applies in the Next build, which is
+      // where an accidental client import would actually matter.
+      // fileURLToPath, not URL.pathname: on Windows the latter yields
+      // "/C:/..." with percent-encoded spaces, which Vite cannot resolve.
+      "server-only": fileURLToPath(
+        new URL("./test/server-only-stub.ts", import.meta.url)
+      ),
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

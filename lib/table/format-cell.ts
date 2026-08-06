@@ -49,8 +49,12 @@ export function defaultColumnWidth(type: ColumnDataType): number {
     case "phone":
       return 160;
     case "currency":
-    case "date":
       return 150;
+    // A formatted date is "27 mar 2026": ~95px of glyphs plus the 25px inline
+    // padding on both sides. At 150 it landed a hair short and wrapped onto a
+    // second line, which reads as broken rather than tight.
+    case "date":
+      return 175;
     case "number":
     case "percent":
     case "boolean":

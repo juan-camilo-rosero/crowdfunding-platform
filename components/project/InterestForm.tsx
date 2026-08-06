@@ -1,53 +1,129 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { DollarSignIcon, MessageSquareIcon } from "lucide-react";
+import { useState } from "react";
+import {
+  BriefcaseIcon,
+  CheckCircleIcon,
+  DollarSignIcon,
+  MessageSquareIcon,
+} from "lucide-react";
 import { es } from "@/i18n";
+import { validateInterest, type InterestErrors } from "@/lib/interests/schema";
+import {
+  INVESTMENT_TYPE_PREFS,
+  type InvestmentTypePref,
+} from "@/lib/interests/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/auth/FormField";
+import { FilterDropdown } from "@/components/filters/FilterDropdown";
+import { createInvestmentInterest } from "./actions";
 
 export type InterestFormProps = {
-  /** The project this interest would be about. Not sent anywhere yet. */
   projectId: string;
   className?: string;
 };
 
 /**
- * "Me interesa este proyecto" — VISUAL MOCK.
+ * "Me interesa este proyecto" — the inline card in the Resumen column.
  *
- * TODO(sprint de captación): wire the submit to a Server Action that inserts
- * into `investment_interests` (the table already exists: user_id, project_id,
- * amount, investment_type_pref, comments, phone, status). It must validate with
- * Zod on the server and take user_id from the session, never from the client —
- * interests_insert_own only accepts rows where user_id = auth.uid(). The
- * "investment type" and "phone if missing from the profile" fields described in
- * views.md belong to that sprint too; this mock covers only the two fields in
- * the design.
+ * Inline by design, not a modal: it sits beside the project it refers to, and
+ * views.md places it there. If it ever needs to become a modal it would reuse
+ * the FormDialog shell rather than grow its own.
  *
- * Until then `handleSubmit` writes NOTHING. It is deliberately inert rather
- * than optimistic: showing a success message for a request that never happened
- * would be a lie to someone trying to invest.
+ * The confirmation shown on success depends ONLY on the row being saved. Email
+ * is fired best-effort by the action and cannot delay or block what the user
+ * sees — a team without a mail provider configured still gets working interest
+ * capture.
  */
 export function InterestForm({ projectId, className }: InterestFormProps) {
-  const [amount, setAmount] = useState("");
+  const [amountText, setAmountText] = useState("");
+  const [typePref, setTypePref] = useState<InvestmentTypePref | null>(null);
   const [comments, setComments] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [errors, setErrors] = useState<InterestErrors>({});
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDone, setIsDone] = useState(false);
+
+  const payload = {
+    projectId,
+    amount: amountText === "" ? null : Number(amountText),
+    investmentTypePref: typePref,
+    comments: comments || null,
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // TODO: replace with the Server Action described above. Referencing the
-    // values here keeps the fields wired to the shape the action will receive.
-    void { projectId, amount, comments };
+    if (isSubmitting) return;
+
+    const parsed = validateInterest(payload);
+    if (!parsed.success) {
+      setErrors(parsed.errors);
+      return;
+    }
+
+    setErrors({});
+    setServerError(null);
+    setIsSubmitting(true);
+
+    const result = await createInvestmentInterest(payload);
+
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      // The card stays put with the message; nothing typed is lost.
+      setServerError(result.error);
+      return;
+    }
+
+    setIsDone(true);
+  }
+
+  function reset() {
+    setAmountText("");
+    setTypePref(null);
+    setComments("");
+    setErrors({});
+    setServerError(null);
+    setIsDone(false);
+  }
+
+  const cardClassName = cn(
+    "flex flex-col gap-4 rounded-[10px] border border-neutral-200 bg-stone-50 p-6",
+    className
+  );
+
+  if (isDone) {
+    return (
+      <div className={cn(cardClassName, "items-center text-center")}>
+        <span
+          aria-hidden="true"
+          className="flex size-11 items-center justify-center rounded-full bg-zinc-100 text-zinc-600"
+        >
+          <CheckCircleIcon className="size-5" />
+        </span>
+        <div>
+          <p
+            role="status"
+            className="text-base font-medium text-stone-900"
+          >
+            {es.projectDetail.interest.successTitle}
+          </p>
+          <p className="mt-1 text-sm text-zinc-600">
+            {es.projectDetail.interest.successHint}
+          </p>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={reset}>
+          {es.projectDetail.interest.successAgain}
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className={cn(
-        "flex flex-col gap-4 rounded-[10px] border border-neutral-200 bg-stone-50 p-6",
-        className
-      )}
-    >
+    <form onSubmit={handleSubmit} noValidate className={cardClassName}>
       <div className="flex flex-col gap-1">
         <h2 className="text-xl font-medium text-stone-900">
           {es.projectDetail.interest.title}
@@ -57,39 +133,82 @@ export function InterestForm({ projectId, className }: InterestFormProps) {
         </p>
       </div>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-zinc-600">
-          {es.projectDetail.interest.amountLabel}
-        </span>
+      <FormField
+        label={es.projectDetail.interest.amountLabel}
+        htmlFor="interest-amount"
+        error={errors.amount}
+      >
         <Input
+          id="interest-amount"
           inputSize="xl"
-          inputMode="numeric"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder={es.projectDetail.interest.amountPlaceholder}
+          inputMode="decimal"
           icon={<DollarSignIcon />}
           className="rounded-[5px]"
+          placeholder={es.projectDetail.interest.amountPlaceholder}
+          value={amountText}
+          disabled={isSubmitting}
+          aria-invalid={!!errors.amount || undefined}
+          // Digits and one decimal point only: no commas, no letters.
+          onChange={(event) =>
+            setAmountText(
+              event.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1")
+            )
+          }
         />
-      </label>
+      </FormField>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-zinc-600">
-          {es.projectDetail.interest.commentsLabel}
-        </span>
+      <FormField
+        label={es.projectDetail.interest.typeLabel}
+        htmlFor="interest-type"
+        error={errors.investmentTypePref}
+      >
+        <FilterDropdown
+          icon={<BriefcaseIcon />}
+          ariaLabel={es.projectDetail.interest.typeLabel}
+          placeholder={es.projectDetail.interest.typePlaceholder}
+          clearLabel={es.projectDetail.interest.typePlaceholder}
+          options={INVESTMENT_TYPE_PREFS.map((value) => ({
+            value,
+            label: es.projectDetail.interest.type[value] ?? value,
+          }))}
+          value={typePref}
+          onSelect={(value) => setTypePref(value as InvestmentTypePref | null)}
+          className="w-full"
+        />
+      </FormField>
+
+      <FormField
+        label={es.projectDetail.interest.commentsLabel}
+        htmlFor="interest-comments"
+        error={errors.comments}
+      >
         <Input
+          id="interest-comments"
           inputSize="xl"
-          value={comments}
-          onChange={(event) => setComments(event.target.value)}
-          placeholder={es.projectDetail.interest.commentsPlaceholder}
           icon={<MessageSquareIcon />}
           className="rounded-[5px]"
+          placeholder={es.projectDetail.interest.commentsPlaceholder}
+          value={comments}
+          disabled={isSubmitting}
+          onChange={(event) => setComments(event.target.value)}
         />
-      </label>
+      </FormField>
+
+      {serverError ? (
+        <p
+          role="alert"
+          className="rounded-[5px] bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {serverError}
+        </p>
+      ) : null}
 
       <Button
         type="submit"
         size="xl"
         className="w-full rounded-[10px] bg-stone-900 text-stone-50 hover:bg-stone-900/90"
+        loading={isSubmitting}
+        loadingText={es.projectDetail.interest.pending}
       >
         {es.projectDetail.interest.submit}
       </Button>

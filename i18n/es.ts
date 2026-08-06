@@ -504,15 +504,41 @@ export const es = {
       subtitle: "Completa estos campos y te contactaremos pronto",
       disclaimer:
         "Enviar este formulario no constituye un compromiso de inversión",
+
       amountLabel: "¿Cuánto te interesa invertir?",
       amountPlaceholder: "Monto aproximado en USD",
+      typeLabel: "Tipo de inversión que prefieres",
+      typePlaceholder: "Elige una opción",
       commentsLabel: "¿Tienes algún comentario?",
       commentsPlaceholder: "Cuéntanos qué te gustaría saber",
-      submit: "Enviar",
-      // Shown after the stub submit, until the real endpoint is wired up.
+
+      // Display labels for investment_interests.investment_type_pref.
+      type: {
+        equity: "Equity",
+        deuda: "Deuda",
+        "préstamo": "Préstamo",
+        socio: "Socio",
+        "no estoy seguro": "No estoy seguro, quiero asesoría",
+      } as Record<string, string>,
+
+      submit: "Enviar interés",
       pending: "Enviando…",
-      mockNotice:
-        "El envío de este formulario se conecta en el siguiente sprint.",
+
+      // On-screen confirmation. Shown on the strength of the saved row alone —
+      // never waits on, or depends on, an email being delivered.
+      successTitle: "Recibimos tu interés",
+      successHint:
+        "El equipo de Investors 180 te contactará en los próximos días hábiles.",
+      successAgain: "Enviar otro interés",
+
+      errors: {
+        amountPositive: "El monto debe ser mayor que cero.",
+        amountNumber: "El monto solo puede tener números.",
+        typeRequired: "Elige el tipo de inversión que prefieres.",
+        projectRequired: "No pudimos identificar el proyecto.",
+        notSignedIn: "Inicia sesión para enviar tu interés.",
+        saveFailed: "No pudimos registrar tu interés. Inténtalo de nuevo.",
+      },
     },
 
     progress: {
@@ -555,9 +581,60 @@ export const es = {
 
     myInvestment: {
       title: "Mi inversión en este proyecto",
-      soon: "Próximamente",
-      soonHint:
-        "Aquí verás el detalle de tu posición en este proyecto: tu capital, tus movimientos y tus documentos.",
+
+      // KPI tiles.
+      invested: "Invertido en este proyecto",
+      investedHint: "Tu capital vigente aquí",
+      investedClosedHint: "Ya recuperaste todo tu capital en este proyecto",
+      yield: "Rendimiento recibido",
+      yieldHint: "Pagos que ya recibiste",
+      yieldNone: "Aún no has recibido rendimientos",
+      share: "Tu participación",
+      shareHint: "Sobre el capital recibido por el proyecto",
+      // Shown when the project has no capital recorded: the ratio has no
+      // denominator, so there is no percentage to state.
+      shareUnavailable: "—",
+      shareUnavailableHint: "Aún no se puede calcular",
+
+      // Closed position: contributions exist but nothing is working today.
+      closed: "Posición cerrada",
+      closedHint:
+        "Ya no tienes capital vigente en este proyecto. Abajo queda el historial de tus aportes.",
+
+      contributionsTitle: "Tus aportes en este proyecto",
+      // Points at the screen that does own the full history.
+      contributionsHint:
+        "Solo los aportes de este proyecto. Tu historial completo está en Transacciones.",
+      tableCaption: "Detalle de tus aportes en este proyecto",
+
+      columns: {
+        date: "Fecha",
+        amount: "Monto",
+        capitalType: "Tipo",
+        agreedReturn: "Retorno pactado",
+        status: "Estado",
+      },
+
+      // Display labels for capital_contributions.capital_type.
+      capitalType: {
+        equity: "Equity",
+        deuda: "Deuda",
+        "préstamo": "Préstamo",
+        socio: "Socio",
+      } as Record<string, string>,
+
+      // Display labels for capital_contributions.status.
+      contributionStatus: {
+        pendiente: "Pendiente",
+        recibido: "Recibido",
+        usado: "Usado",
+        devuelto: "Devuelto",
+      } as Record<string, string>,
+
+      noContributions: "Todavía no hay aportes registrados",
+      noContributionsHint:
+        "Tu posición aparece aquí en cuanto se registre el primer aporte.",
+      loadError: "No pudimos cargar tu posición en este proyecto.",
     },
   },
 
