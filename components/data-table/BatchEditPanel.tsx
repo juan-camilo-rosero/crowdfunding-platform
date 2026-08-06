@@ -6,7 +6,10 @@ import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import { es } from "@/i18n";
 import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
 import { Button } from "@/components/ui/button";
-import { EditableDataTable } from "./EditableDataTable";
+import {
+  EditableDataTable,
+  type EditableDataTableProps,
+} from "./EditableDataTable";
 
 const NO_CHANGES: TableChanges = { updates: [], inserts: [] };
 
@@ -26,6 +29,8 @@ export type BatchEditPanelProps = {
   datasetKey: string;
   /** Filter control (tabs, dropdown…). Receives the unsaved-changes guard. */
   renderFilter?: (guard: NavigationGuard) => ReactNode;
+  /** Optional trailing action column; passed straight to the grid. */
+  rowAction?: EditableDataTableProps["rowAction"];
   /**
    * Persists the batch. Injected so each screen can adapt the payload before
    * sending it, while the accumulate → confirm → save → reset flow stays here.
@@ -48,6 +53,7 @@ export function BatchEditPanel({
   allowInsert,
   datasetKey,
   renderFilter,
+  rowAction,
   onSave,
 }: BatchEditPanelProps) {
   const router = useRouter();
@@ -102,6 +108,7 @@ export function BatchEditPanel({
         rows={rows}
         onChangesChange={setChanges}
         showNewRecordRow={allowInsert}
+        rowAction={rowAction}
       />
 
       <div className="flex flex-wrap items-center gap-4">

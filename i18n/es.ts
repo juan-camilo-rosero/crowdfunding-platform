@@ -748,6 +748,38 @@ export const es = {
     emptyTable: "Esta tabla todavía no tiene registros.",
     discardConfirm:
       "Tienes cambios sin guardar. Si continúas se perderán. ¿Quieres salir de todos modos?",
+
+    photos: {
+      // Column header and per-row trigger in the projects table.
+      column: "Fotos",
+      manage: "Fotos",
+      // {n} is replaced with how many the project already has.
+      count: "{n}",
+      none: "Sin fotos",
+
+      title: "Fotos del proyecto",
+      description:
+        "Estas imágenes se muestran en el catálogo y en la galería del proyecto.",
+      addLabel: "Agregar imagen",
+      uploading: "Subiendo…",
+      removeLabel: "Quitar esta imagen",
+      empty: "Este proyecto todavía no tiene fotos",
+      emptyHint: "La primera que subas será la portada en el catálogo.",
+      // Says which one the catalogue picks up, since it uses the first.
+      coverBadge: "Portada",
+      hint: "Formatos: JPG, PNG, WebP o AVIF. Máximo 30 MB por imagen.",
+      close: "Listo",
+
+      errors: {
+        notAdmin: "No tienes permiso para cambiar las fotos.",
+        noFile: "Elige una imagen para subir.",
+        badType: "Ese formato no es válido. Usa JPG, PNG, WebP o AVIF.",
+        tooLarge: "La imagen supera los 30 MB.",
+        projectNotFound: "No encontramos ese proyecto.",
+        uploadFailed: "No pudimos subir la imagen. Inténtalo de nuevo.",
+        saveFailed: "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      },
+    },
   },
 
   pipeline: {

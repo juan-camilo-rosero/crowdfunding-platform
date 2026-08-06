@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { PlusIcon } from "lucide-react";
 import { resolveColumnWidth } from "@/lib/table/format-cell";
 import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
@@ -27,6 +27,16 @@ export type EditableDataTableProps = {
   onChangesChange?: (changes: TableChanges) => void;
   /** Renders the trailing draft row that creates records. */
   showNewRecordRow?: boolean;
+  /**
+   * Optional trailing column holding a control per EXISTING record — the
+   * projects tab uses it to open the photo manager.
+   *
+   * Deliberately a render prop rather than a new column type: what goes in it
+   * is a client component with its own state, which a serializable
+   * TableColumn cannot describe. It is absent from the draft row, since a
+   * record that has not been created yet has no id to act on.
+   */
+  rowAction?: { label: string; width?: number; render: (row: TableRow) => ReactNode };
   emptyMessage?: string;
 };
 
@@ -56,6 +66,7 @@ export function EditableDataTable({
   rowIdKey = "id",
   onChangesChange,
   showNewRecordRow = true,
+  rowAction,
   emptyMessage = "No hay registros todavía.",
 }: EditableDataTableProps) {
   /** Pending cell edits, grouped by row id then column. */
@@ -69,9 +80,13 @@ export function EditableDataTable({
     () => columns.map((column) => resolveColumnWidth(column)),
     [columns]
   );
+  /** Width of the optional trailing action column. */
+  const actionWidth = rowAction ? (rowAction.width ?? 140) : 0;
   const totalWidth = useMemo(
-    () => widths.reduce((sum, width) => sum + width, INDEX_COLUMN_WIDTH),
-    [widths]
+    () =>
+      widths.reduce((sum, width) => sum + width, INDEX_COLUMN_WIDTH) +
+      actionWidth,
+    [widths, actionWidth]
   );
 
   const allRows = useMemo(() => [...rows, ...createdRows], [rows, createdRows]);
@@ -181,6 +196,14 @@ export function EditableDataTable({
               <DataTableHeaderCell column={column} />
             </div>
           ))}
+          {rowAction ? (
+            <div
+              style={{ width: actionWidth }}
+              className="flex shrink-0 items-center px-6.25 text-base font-medium text-ink-900"
+            >
+              {rowAction.label}
+            </div>
+          ) : null}
         </div>
 
         {/* Records */}
@@ -208,6 +231,15 @@ export function EditableDataTable({
                 />
               </div>
             ))}
+            {rowAction ? (
+              <div
+                style={{ width: actionWidth }}
+                className="flex shrink-0 items-center bg-elevated px-6.25"
+              >
+                {/* Only for records that exist: a draft row has no id yet. */}
+                {rowIndex < rows.length ? rowAction.render(allRows[rowIndex]) : null}
+              </div>
+            ) : null}
           </div>
         ))}
 
@@ -237,6 +269,12 @@ export function EditableDataTable({
                 />
               </div>
             ))}
+            {rowAction ? (
+              <div
+                style={{ width: actionWidth }}
+                className="shrink-0 bg-elevated"
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
