@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   CircleDotIcon,
   DollarSignIcon,
+  DownloadIcon,
   HashIcon,
   LinkIcon,
   ListIcon,
@@ -32,7 +33,14 @@ export type ColumnDataType =
   | "percent"
   | "date"
   | "select"
-  | "boolean";
+  | "boolean"
+  /**
+   * Column that holds a CONTROL rather than a value — a download button, for
+   * instance. Only ReadOnlyDataTable renders it, always through `renderCell`;
+   * the editable grid has no reason to declare one, which is why its input kind
+   * is a placeholder.
+   */
+  | "action";
 
 /** HTML input types; "select" and "textarea" are rendered as their own controls. */
 export type ColumnInputKind =
@@ -71,6 +79,8 @@ export const COLUMN_TYPE_META: Record<ColumnDataType, ColumnTypeMeta> = {
   // Lucide has no checkbox-ish "boolean" glyph that reads well at 16px;
   // the toggle communicates the two-state nature best.
   boolean: { icon: ToggleLeftIcon, input: "checkbox", align: "left" },
+  // Never edited: the cell content comes from the caller's renderCell.
+  action: { icon: DownloadIcon, input: "text", align: "left" },
 };
 
 /** Fallback keeps an unknown type rendering instead of crashing the table. */

@@ -36,6 +36,18 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  /* Status colours. Semantic, not decorative: they say what a thing IS
+     (approved / waiting / rejected), so the same state reads the same
+     everywhere. Never use Tailwind's raw green, amber or red palette
+     utilities for these. */
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-foreground: var(--status-warning-foreground);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-foreground: var(--status-danger-foreground);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-foreground: var(--status-neutral-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -116,6 +128,14 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --status-success: #e4f5ea;
+  --status-success-foreground: #15803d;
+  --status-warning: #fdf0dc;
+  --status-warning-foreground: #b45309;
+  --status-danger: #fdeaea;
+  --status-danger-foreground: #dc2626;
+  --status-neutral: #ededed;
+  --status-neutral-foreground: #585858;
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -156,6 +176,14 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --status-success: oklch(0.34 0.07 152);
+  --status-success-foreground: oklch(0.87 0.13 152);
+  --status-warning: oklch(0.34 0.07 70);
+  --status-warning-foreground: oklch(0.87 0.13 80);
+  --status-danger: oklch(0.34 0.09 27);
+  --status-danger-foreground: oklch(0.87 0.13 22);
+  --status-neutral: oklch(0.30 0 0);
+  --status-neutral-foreground: oklch(0.80 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

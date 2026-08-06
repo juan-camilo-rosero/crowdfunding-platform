@@ -14,6 +14,8 @@ export const INVESTOR_HOME_ROUTE = "/inicio";
 /** Not auth destinations; kept here so each path has one spelling. */
 export const MY_INVESTMENTS_ROUTE = "/mis-inversiones";
 export const TRANSACTIONS_ROUTE = "/transacciones";
+export const DOCUMENTS_ROUTE = "/documentos";
+export const REQUESTS_ROUTE = "/solicitudes";
 export const ADMIN_HOME_ROUTE = "/admin";
 
 export type UserCapabilities = {

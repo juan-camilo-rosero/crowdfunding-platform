@@ -286,6 +286,120 @@ export const es = {
     retry: "Reintentar",
   },
 
+  documents: {
+    title: "Documentos",
+    subtitle:
+      "Los documentos de tus proyectos y los tuyos propios, del más reciente al más antiguo.",
+
+    columns: {
+      docType: "Tipo de documento",
+      project: "Nombre del proyecto",
+      date: "Fecha",
+      download: "Descargar",
+    },
+
+    // Display labels for the twelve values stored in documents.doc_type. The
+    // stored values mix English and Spanish; these are all Spanish.
+    type: {
+      deed: "Escritura",
+      "property record": "Registro de propiedad",
+      survey: "Levantamiento topográfico",
+      planos: "Planos",
+      permisos: "Permisos",
+      presupuesto: "Presupuesto",
+      contrato: "Contrato",
+      "operating agreement": "Acuerdo operativo",
+      facturas: "Facturas",
+      "estados de cuenta": "Estados de cuenta",
+      reportes: "Reportes",
+      "certificado de aporte": "Certificado de aporte",
+    } as Record<string, string>,
+
+    // Shown in the project column, and as a filter option, when the document
+    // has no project attached.
+    noProject: "General",
+
+    filters: {
+      project: "Proyecto",
+      allProjects: "Todos los proyectos",
+      clear: "Limpiar filtros",
+    },
+
+    // {n} is replaced with the number of rows listed.
+    resultsCount: "{n} documentos",
+    resultsCountOne: "1 documento",
+
+    tableCaption: "Tus documentos disponibles",
+
+    download: "Descargar",
+    // {name} is replaced with the document's name.
+    downloadLabel: "Descargar {name}",
+    downloading: "Abriendo…",
+    downloadError: "No pudimos abrir este documento.",
+    downloadDenied: "No tienes acceso a este documento.",
+    noFile: "Este documento aún no tiene archivo.",
+
+    // Copy fixed by views.md.
+    empty: "Aún no tienes documentos disponibles",
+    emptyHint:
+      "Aquí aparecerán los documentos de tus proyectos en cuanto se publiquen.",
+    emptyFiltered: "Ningún documento coincide con este filtro",
+    emptyFilteredHint: "Prueba con otro proyecto o vuelve a ver todos tus documentos.",
+
+    loadError: "No pudimos cargar tus documentos.",
+    retry: "Reintentar",
+  },
+
+  requests: {
+    title: "Solicitudes",
+    subtitle:
+      "Tus solicitudes de reasignación de capital y en qué estado va cada una.",
+
+    columns: {
+      date: "Fecha",
+      from: "Origen",
+      to: "Destino",
+      amount: "Monto",
+      status: "Estado",
+    },
+
+    // Display labels for the three values stored in
+    // reassignment_requests.status. Already Spanish in the database; routed
+    // through here so the visible text has a single source.
+    status: {
+      pendiente: "Pendiente",
+      aprobada: "Aprobada",
+      rechazada: "Rechazada",
+    } as Record<string, string>,
+
+    // Shown when a request points at a project that no longer resolves.
+    unknownProject: "Proyecto no disponible",
+
+    filters: {
+      toProject: "Proyecto de destino",
+      status: "Estado",
+      allProjects: "Todos los destinos",
+      allStatuses: "Todos los estados",
+      clear: "Limpiar filtros",
+    },
+
+    // {n} is replaced with the number of rows listed.
+    resultsCount: "{n} solicitudes",
+    resultsCountOne: "1 solicitud",
+
+    tableCaption: "Tus solicitudes de reasignación",
+
+    empty: "Aún no tienes solicitudes",
+    emptyHint:
+      "Cuando pidas mover capital entre proyectos, aquí verás cada solicitud y su estado.",
+    emptyFiltered: "Ninguna solicitud coincide con estos filtros",
+    emptyFilteredHint:
+      "Prueba con otra combinación o vuelve a ver todas tus solicitudes.",
+
+    loadError: "No pudimos cargar tus solicitudes.",
+    retry: "Reintentar",
+  },
+
   projectDetail: {
     back: "Volver al portafolio",
     photoAlt: "Foto del proyecto",
