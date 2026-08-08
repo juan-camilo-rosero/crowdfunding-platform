@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  INELIGIBLE_DESTINATION_STATUSES,
   getAvailableForProject,
   getReassignablePositions,
   getReassignmentDestinations,
@@ -49,10 +48,13 @@ const POSITIONS = [
   { project_id: "p1", current_capital: "10000" },
   { project_id: "p2", current_capital: "5000" },
 ];
+// Sources must be FINISHED projects, so the fixtures say so explicitly.
 const PROJECTS = [
-  { id: "p1", name: "Villa Rotonda 118" },
-  { id: "p2", name: "North Port Lote 7" },
+  { id: "p1", name: "Villa Rotonda 118", status: "vendido", progress: 100 },
+  { id: "p2", name: "North Port Lote 7", status: "rentado", progress: 100 },
 ];
+/** A project still running: never a valid source, always a valid destination. */
+const RUNNING = { id: "p9", name: "Punta Gorda Lote 9", status: "construcción", progress: 40 };
 
 describe("subtractPendingClaims — the isolated scope decision", () => {
   it("removes what pending requests already claim from each source", () => {
@@ -167,17 +169,76 @@ describe("getReassignablePositions", () => {
   });
 });
 
-describe("getReassignmentDestinations", () => {
-  it("excludes sold and rented projects", async () => {
-    const { client, calls } = mockClient({ projects: { data: PROJECTS } });
-    await getReassignmentDestinations(client);
+describe("the direction of the rule", () => {
+  it("a FINISHED project is a valid source", async () => {
+    const { client } = mockClient({
+      investor_project_position: { data: POSITIONS },
+      reassignment_requests: { data: [] },
+      projects: { data: PROJECTS },
+    });
 
-    const filter = calls.find((c) => c.method === "not");
-    expect(filter!.args[0]).toBe("status");
-    expect(filter!.args[1]).toBe("in");
-    for (const status of INELIGIBLE_DESTINATION_STATUSES) {
-      expect(String(filter!.args[2])).toContain(status);
-    }
+    const { sources } = await getReassignablePositions(client, ["inv-a"]);
+    expect(sources.map((s) => s.projectId).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("a RUNNING project is NOT a source, even with capital in it", async () => {
+    // Capital in a project still under way is committed to that work.
+    const { client } = mockClient({
+      investor_project_position: {
+        data: [{ project_id: RUNNING.id, current_capital: "10000" }],
+      },
+      reassignment_requests: { data: [] },
+      projects: { data: [RUNNING] },
+    });
+
+    const { sources } = await getReassignablePositions(client, ["inv-a"]);
+    expect(sources).toEqual([]);
+  });
+
+  it("mixes correctly: only the finished half is offered", async () => {
+    const { client } = mockClient({
+      investor_project_position: {
+        data: [...POSITIONS, { project_id: RUNNING.id, current_capital: "8000" }],
+      },
+      reassignment_requests: { data: [] },
+      projects: { data: [...PROJECTS, RUNNING] },
+    });
+
+    const { sources } = await getReassignablePositions(client, ["inv-a"]);
+    expect(sources.map((s) => s.projectId)).not.toContain(RUNNING.id);
+    expect(sources).toHaveLength(2);
+  });
+
+  it("a RUNNING project IS a valid destination", async () => {
+    const { client } = mockClient({ projects: { data: [...PROJECTS, RUNNING] } });
+
+    const { destinations } = await getReassignmentDestinations(client);
+    expect(destinations.map((d) => d.projectId)).toEqual([RUNNING.id]);
+  });
+
+  it("a FINISHED project is NOT a destination — the reverse move is refused", async () => {
+    const { client } = mockClient({ projects: { data: PROJECTS } });
+
+    const { destinations } = await getReassignmentDestinations(client);
+    expect(destinations).toEqual([]);
+  });
+
+  it("the two ends are mirror images: no project is both", async () => {
+    const all = [...PROJECTS, RUNNING];
+    const { client: c1 } = mockClient({
+      investor_project_position: {
+        data: all.map((p) => ({ project_id: p.id, current_capital: "5000" })),
+      },
+      reassignment_requests: { data: [] },
+      projects: { data: all },
+    });
+    const { sources } = await getReassignablePositions(c1, ["inv-a"]);
+
+    const { client: c2 } = mockClient({ projects: { data: all } });
+    const { destinations } = await getReassignmentDestinations(c2);
+
+    const sourceIds = new Set(sources.map((s) => s.projectId));
+    expect(destinations.every((d) => !sourceIds.has(d.projectId))).toBe(true);
   });
 });
 
@@ -192,6 +253,20 @@ describe("getAvailableForProject — the number the server enforces", () => {
     });
 
     expect(await getAvailableForProject(client, ["inv-a"], "p1")).toBe(6000);
+  });
+
+  it("returns 0 for a RUNNING project, so the action refuses it", async () => {
+    // The server re-check goes through this, so the rule holds even if the
+    // browser sent a source it should never have been offered.
+    const { client } = mockClient({
+      investor_project_position: {
+        data: [{ project_id: RUNNING.id, current_capital: "10000" }],
+      },
+      reassignment_requests: { data: [] },
+      projects: { data: [RUNNING] },
+    });
+
+    expect(await getAvailableForProject(client, ["inv-a"], RUNNING.id)).toBe(0);
   });
 
   it("returns 0 for a project the investor holds nothing in", async () => {

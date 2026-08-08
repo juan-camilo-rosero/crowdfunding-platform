@@ -26,6 +26,8 @@ export type CatalogProjectCardProps = {
   fundraisingGoal?: number | null;
   /** Capital the PROJECT has raised, from the project_fundraising view. */
   capitalRaised?: number | null;
+  /** projects.capital_required — the total the project needs. */
+  capitalRequired?: number | null;
   /**
    * projects.offered_return — the return the project advertises publicly, free
    * text, shown verbatim. Null when the project has not published one.
@@ -61,6 +63,7 @@ export function CatalogProjectCard({
   imageUrl,
   fundraisingGoal,
   capitalRaised,
+  capitalRequired,
   offeredReturn,
   fullyFunded = false,
   isInvested = false,
@@ -119,6 +122,7 @@ export function CatalogProjectCard({
         variant="fundraising"
         fundraisingGoal={fundraisingGoal}
         capitalRaised={capitalRaised}
+        capitalRequired={capitalRequired}
       />
 
       {/* The return slot always occupies the same space so the cards line up,

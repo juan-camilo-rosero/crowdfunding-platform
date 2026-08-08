@@ -190,6 +190,12 @@ export function ReassignmentRequestModal({
                 className="w-full"
               />
 
+              {/* States the rule before a choice is made, so an empty or short
+                  list reads as a rule rather than as missing data. */}
+              <p className="text-xs text-ink-400">
+                {es.requests.create.sourceRule}
+              </p>
+
               {selectedSource ? (
                 <p className="text-xs text-ink-500">
                   {es.requests.create.available.replace(

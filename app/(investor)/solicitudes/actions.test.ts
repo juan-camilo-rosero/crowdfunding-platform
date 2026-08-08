@@ -50,10 +50,12 @@ function baseline({ pending = [] as unknown[] } = {}) {
       data: [{ project_id: UUID_FROM, current_capital: "10000" }],
     },
     reassignment_requests: { data: pending },
+    // The rule: capital only leaves a FINISHED project and only enters a
+    // running one, so the two fixtures sit on opposite sides of it.
     projects: {
       data: [
-        { id: UUID_FROM, name: "Origen" },
-        { id: UUID_TO, name: "Destino" },
+        { id: UUID_FROM, name: "Origen", status: "vendido", progress: 100 },
+        { id: UUID_TO, name: "Destino", status: "construcción", progress: 30 },
       ],
     },
   };
@@ -171,8 +173,26 @@ describe("origin and destination rules are re-checked", () => {
   });
 
   it("rejects a destination that is not eligible", async () => {
-    // The destinations query returns only the source project.
-    tableData.projects = { data: [{ id: UUID_FROM, name: "Origen" }] };
+    // Only the finished project exists, so there is no running one to receive.
+    tableData.projects = {
+      data: [{ id: UUID_FROM, name: "Origen", status: "vendido", progress: 100 }],
+    };
+
+    const result = await createReassignmentRequest(VALID);
+
+    expect(result.ok).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a source that is still RUNNING, even with capital in it", async () => {
+    // The browser should never have offered it; the server re-check refuses it
+    // regardless.
+    tableData.projects = {
+      data: [
+        { id: UUID_FROM, name: "Origen", status: "construcción", progress: 40 },
+        { id: UUID_TO, name: "Destino", status: "permisos", progress: 10 },
+      ],
+    };
 
     const result = await createReassignmentRequest(VALID);
 

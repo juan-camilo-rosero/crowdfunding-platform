@@ -1,3 +1,4 @@
+import { isClosedToInvestment } from "@/lib/projects/enums";
 import type {
   ReassignmentDestination,
   ReassignmentSource,
@@ -16,7 +17,6 @@ type QueryBuilder = {
   select: (columns: string) => QueryBuilder;
   eq: (column: string, value: unknown) => QueryBuilder;
   in: (column: string, values: unknown[]) => QueryBuilder;
-  not: (column: string, operator: string, value: unknown) => QueryBuilder;
   gt: (column: string, value: unknown) => QueryBuilder;
   then: Promise<{ data: unknown[] | null; error: unknown }>["then"];
 };
@@ -26,12 +26,21 @@ export type AvailabilityClient = {
 };
 
 /**
- * Statuses that disqualify a project as a DESTINATION.
+ * BUSINESS RULE — capital only flows out of a FINISHED project.
  *
- * A sold project is finished and a rented one is already producing: neither is
- * taking capital. Scope decision — isolated here so changing it is one edit.
+ * Capital sitting in a project that is still running is committed to that work;
+ * it is not free to be pulled out and put somewhere else. Once the project is
+ * finished — sold, rented, or the work complete — the capital has done its job
+ * there and can be redirected.
+ *
+ * So the two ends are mirror images, and both are enforced here and re-checked
+ * by the Server Action:
+ *   · ORIGIN      must be closed to investment (finished)
+ *   · DESTINATION must be open to investment (still running)
+ *
+ * The example that fixes the direction: capital in a house already rented CAN
+ * move to a project just starting; the reverse cannot.
  */
-export const INELIGIBLE_DESTINATION_STATUSES = ["vendido", "rentado"] as const;
 
 /** Request states that still hold capital hostage. */
 const BLOCKING_REQUEST_STATUS = "pendiente";
@@ -127,24 +136,30 @@ export async function getReassignablePositions(
   const projectIds = [...availableByProject.keys()];
   const projects = await client
     .from("projects")
-    .select("id, name")
+    .select("id, name, status, progress")
     .in("id", projectIds);
 
   if (projects.error) return { sources: [], failed: true };
 
-  const nameById = new Map(
-    ((projects.data ?? []) as { id: string; name: string }[]).map((p) => [
-      p.id,
-      p.name,
-    ])
+  const rows = (projects.data ?? []) as {
+    id: string;
+    name: string;
+    status: string | null;
+    progress: number | null;
+  }[];
+
+  // Only FINISHED projects can be a source. Applied here rather than in the
+  // query so the rule reads as one predicate shared with the rest of the app.
+  const eligibleById = new Map(
+    rows.filter((p) => isClosedToInvestment(p)).map((p) => [p.id, p.name])
   );
 
   const sources = [...availableByProject.entries()]
     // A source fully claimed by pending requests has nothing left to offer.
-    .filter(([, amount]) => amount > 0)
+    .filter(([projectId, amount]) => amount > 0 && eligibleById.has(projectId))
     .map(([projectId, amount]) => ({
       projectId,
-      name: nameById.get(projectId) ?? "",
+      name: eligibleById.get(projectId) ?? "",
       availableAmount: amount,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
@@ -152,18 +167,27 @@ export async function getReassignablePositions(
   return { sources, failed: false };
 }
 
-/** Projects that can RECEIVE capital. Public information, no investor scope. */
+/**
+ * Projects that can RECEIVE capital: the ones still running.
+ *
+ * The mirror of the source rule. Public information, so no investor scope.
+ */
 export async function getReassignmentDestinations(
   client: AvailabilityClient
 ): Promise<{ destinations: ReassignmentDestination[]; failed: boolean }> {
   const { data, error } = await client
     .from("projects")
-    .select("id, name")
-    .not("status", "in", `(${INELIGIBLE_DESTINATION_STATUSES.join(",")})`);
+    .select("id, name, status, progress");
 
   if (error) return { destinations: [], failed: true };
 
-  const destinations = ((data ?? []) as { id: string; name: string }[])
+  const destinations = ((data ?? []) as {
+    id: string;
+    name: string;
+    status: string | null;
+    progress: number | null;
+  }[])
+    .filter((project) => !isClosedToInvestment(project))
     .map((project) => ({ projectId: project.id, name: project.name }))
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 

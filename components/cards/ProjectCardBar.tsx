@@ -1,5 +1,5 @@
 import { es } from "@/i18n";
-import { formatPercent } from "@/lib/format";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 /**
  * Which figure the bar reports.
@@ -19,6 +19,12 @@ export type ProjectCardBarProps = {
   fundraisingGoal?: number | null;
   /** Capital the PROJECT has raised. Read on the "fundraising" variant. */
   capitalRaised?: number | null;
+  /**
+   * projects.capital_required — the total the project needs. Shown on the
+   * "fundraising" variant when there is no open round, where it is the only
+   * meaningful answer to how much capital the project is after.
+   */
+  capitalRequired?: number | null;
 };
 
 /**
@@ -38,6 +44,7 @@ export function ProjectCardBar({
   progress,
   fundraisingGoal,
   capitalRaised,
+  capitalRequired,
 }: ProjectCardBarProps) {
   const meter =
     variant === "progress"
@@ -48,7 +55,12 @@ export function ProjectCardBar({
     const emptyLabel =
       variant === "progress"
         ? es.investmentCard.noProgress
-        : es.catalog.notFundraising;
+        : capitalRequired && capitalRequired > 0
+          ? es.catalog.capitalRequired.replace(
+              "{amount}",
+              formatCurrency(capitalRequired)
+            )
+          : es.catalog.notFundraising;
 
     return (
       <div className="flex flex-col gap-1.5">
@@ -91,7 +103,11 @@ function resolveFundraising(
 ) {
   if (!fundraisingGoal || fundraisingGoal <= 0) return null;
   return {
-    label: es.catalog.raised,
+    // "Recaudado $130,000 de $200,000" — the goal sits next to the amount it
+    // is the denominator of, so the percentage beside it is self-explanatory.
+    label: es.catalog.raised
+      .replace("{raised}", formatCurrency(capitalRaised ?? 0))
+      .replace("{goal}", formatCurrency(fundraisingGoal)),
     share: Math.min(100, ((capitalRaised ?? 0) / fundraisingGoal) * 100),
   };
 }

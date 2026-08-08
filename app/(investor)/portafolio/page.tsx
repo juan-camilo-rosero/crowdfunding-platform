@@ -57,7 +57,7 @@ export default async function CatalogPage({
   let query = supabase
     .from("projects")
     .select(
-      "id, name, type, city, status, progress, in_fundraising, fundraising_goal, offered_return, main_photos"
+      "id, name, type, city, status, progress, in_fundraising, fundraising_goal, capital_required, offered_return, main_photos"
     )
     .limit(CATALOG_LIMIT);
 
@@ -173,6 +173,7 @@ export default async function CatalogPage({
                   imageUrl={project.main_photos?.[0] ?? null}
                   fundraisingGoal={project.fundraising_goal}
                   capitalRaised={raisedByProject.get(project.id) ?? 0}
+                  capitalRequired={project.capital_required}
                   fullyFunded={isFullyFunded(
                     project,
                     raisedByProject.get(project.id) ?? 0

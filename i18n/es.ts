@@ -210,7 +210,12 @@ export const es = {
 
     // Card: public marketing figures of the project.
     // Bar of the catalogue variant: how much of the goal is already raised.
-    raised: "Recaudado",
+    // {raised} and {goal} are already formatted. Both figures live on the bar's
+    // own line so the card gains information without gaining an element.
+    raised: "Recaudado {raised} de {goal}",
+    // No open round: the project's total capital need is the honest answer to
+    // "how much is being raised", and it is labelled as what it is.
+    capitalRequired: "Capital requerido: {amount}",
     notFundraising: "Sin captación abierta por ahora",
     // Caption under projects.offered_return. Deliberately says "ofrecido": it
     // is what the project offers to raise capital, NOT what any investor has
@@ -477,8 +482,12 @@ export const es = {
         "Esta solicitud será revisada por el equipo de Investors 180. Enviarla no reasigna tu capital de inmediato.",
 
       noCapital: "No tienes capital disponible para reasignar",
+      // Says WHY the list is empty. Without this an investor with capital in a
+      // running project reads it as a bug.
       noCapitalHint:
-        "Cuando tengas capital vigente en algún proyecto podrás pedir moverlo desde aquí.",
+        "Solo se puede mover capital de proyectos ya finalizados. Cuando alguno de los tuyos se cierre, podrás pedir moverlo desde aquí.",
+      // Sits under the origin field, so the rule is visible before choosing.
+      sourceRule: "Solo aparecen proyectos finalizados: su capital ya cumplió su ciclo.",
       noDestinations: "No hay proyectos disponibles como destino por ahora",
 
       success: "Tu solicitud quedó registrada y está pendiente de revisión.",
