@@ -44,6 +44,51 @@ export const es = {
     } satisfies Record<AuthErrorCode, string>,
   },
 
+  auth: {
+    // Sign-up mode. The existing copy of the current screen.
+    signup: {
+      title: "Crea tu cuenta",
+      subtitle: "Consulta en tiempo real el estado y avance de tus inversiones",
+      submit: "Crear cuenta",
+      submitting: "Creando tu cuenta…",
+      switchPrompt: "¿Ya tienes cuenta?",
+      switchAction: "Inicia sesión",
+    },
+    // Sign-in mode.
+    login: {
+      title: "Bienvenido de vuelta",
+      subtitle: "Ingresa para ver el estado de tus inversiones",
+      submit: "Iniciar sesión",
+      submitting: "Entrando…",
+      switchPrompt: "¿No tienes cuenta?",
+      switchAction: "Crea una",
+    },
+
+    // Second step of sign-up: the address is settled, so it becomes context.
+    signingUpAs: "Creando cuenta para",
+    changeEmail: "Cambiar",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "Tu contraseña",
+    showPassword: "Mostrar contraseña",
+    hidePassword: "Ocultar contraseña",
+
+    errors: {
+      emailInvalid: "Escribe un correo electrónico válido.",
+      passwordShort: "La contraseña debe tener al menos 8 caracteres.",
+      passwordRequired: "Escribe tu contraseña.",
+      // Deliberately generic: saying "ese correo no existe" would let anyone
+      // test which addresses have an account here.
+      invalidCredentials: "Correo o contraseña incorrectos.",
+      // Sign-up with an address that already has an account. Points at the way
+      // forward without confirming anything a stranger could not already try.
+      alreadyRegistered:
+        "Ese correo ya tiene una cuenta. Inicia sesión para continuar.",
+      weakPassword: "Esa contraseña es demasiado débil. Prueba con una más larga.",
+      rateLimited: "Demasiados intentos. Espera un momento y vuelve a intentarlo.",
+      unexpected: "No pudimos completar la operación. Inténtalo de nuevo.",
+    },
+  },
+
   home: {
     title: "Inicio",
     signedInAs: "Sesión iniciada como",

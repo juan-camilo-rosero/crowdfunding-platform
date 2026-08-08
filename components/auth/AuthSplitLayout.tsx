@@ -32,21 +32,26 @@ export function AuthSplitLayout({
 }: AuthSplitLayoutProps) {
   return (
     <div className="flex min-h-dvh flex-1">
-      <section className="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
+      {/* py-8 and a scrollable column: with the larger logo and two fields the
+          content can outgrow a short desktop viewport, and a centred flex child
+          that overflows loses its top edge with no way to scroll back to it. */}
+      <section className="flex w-full flex-col justify-center overflow-y-auto px-6 py-8 lg:w-1/2 lg:px-16">
         <div
           className={cn(
             "mx-auto flex w-full flex-col",
             contentClassName ?? "max-w-[340px]"
           )}
         >
-          <BrandLogo className="mb-8" />
+          {/* Larger than the sidebar's: on the auth screens the lockup is the
+              only branding on the page, so it carries more weight. */}
+          <BrandLogo className="mb-6" imageClassName="h-16" />
 
           {/* Design: 36px / weight 500 / #1E1E1E */}
           <h1 className="text-center text-4xl font-medium text-ink-900">
             {title}
           </h1>
           {/* Design: 16px / weight 400 / #848484 */}
-          <p className="mt-4 text-center text-base leading-relaxed text-ink-500">
+          <p className="mt-3 text-center text-base leading-relaxed text-ink-500">
             {subtitle}
           </p>
 

@@ -8,6 +8,8 @@
  * See the access matrix in .claude/docs/user-management.md.
  */
 export const LOGIN_ROUTE = "/login";
+/** Sign-up screen. The counterpart of LOGIN_ROUTE; the two toggle to each other. */
+export const SIGNUP_ROUTE = "/registro";
 export const ONBOARDING_ROUTE = "/onboarding";
 export const CATALOG_ROUTE = "/portafolio";
 export const INVESTOR_HOME_ROUTE = "/inicio";

@@ -4,7 +4,9 @@ import type { AuthErrorCode } from "@/lib/auth/auth-errors";
 import {
   ADMIN_HOME_ROUTE,
   CATALOG_ROUTE,
+  LOGIN_ROUTE,
   ONBOARDING_ROUTE,
+  SIGNUP_ROUTE,
   homeRouteFor,
 } from "@/lib/auth/routes";
 import { isRole, isUserStatus } from "@/types/user";
@@ -12,7 +14,7 @@ import { isRole, isUserStatus } from "@/types/user";
 // (auth) routes: no session required.
 // "/callback" MUST be public: it is where Google's `code` is exchanged for a
 // session, and at that point the user has no session cookies yet.
-const PUBLIC_PATHS = ["/login", "/callback"];
+const PUBLIC_PATHS = [LOGIN_ROUTE, SIGNUP_ROUTE, "/callback"];
 
 // "/" is public and handled separately (exact match, not by prefix): today a
 // redirector, tomorrow the public landing page. See app/page.tsx.
@@ -78,11 +80,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   };
 
-  if (pathname === ROOT_PATH || PUBLIC_PATHS.some((p) => isPathUnder(pathname, p))) {
-    return response;
-  }
+  const isAuthScreen =
+    isPathUnder(pathname, LOGIN_ROUTE) || isPathUnder(pathname, SIGNUP_ROUTE);
 
-  if (!user) {
+  if (pathname === ROOT_PATH || PUBLIC_PATHS.some((p) => isPathUnder(pathname, p))) {
+    // Signed in already: the sign-in and sign-up screens have nothing to offer,
+    // so they are skipped rather than shown. The destination is decided further
+    // down by the same homeRouteFor every other redirect uses, which is why
+    // this only marks the case instead of redirecting here.
+    if (!user || !isAuthScreen) return response;
+  } else if (!user) {
     return redirectToLogin();
   }
 
@@ -155,6 +162,13 @@ export async function proxy(request: NextRequest) {
       isInvestor: await isInvestor(),
       onboardingCompleted: profile.onboarding_completed,
     });
+
+  // An authenticated user has no business on the sign-in or sign-up screens.
+  // Placed here, after the capabilities are known, so the destination comes
+  // from homeRouteFor like every other redirect.
+  if (isAuthScreen) {
+    return redirectTo(await homeRoute());
+  }
 
   // -- Basic onboarding gate ------------------------------------------------
   // Runs BEFORE the capability checks: basic onboarding is done by EVERY

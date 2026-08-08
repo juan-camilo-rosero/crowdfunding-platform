@@ -4,12 +4,11 @@ import { AuthForm } from "@/components/auth/AuthForm";
 import { AuthSplitLayout } from "@/components/auth/AuthSplitLayout";
 
 /**
- * Sign in. Its counterpart is /registro; the footer link toggles between them.
- *
- * proxy.ts keeps an authenticated user out of here, sending them wherever
- * homeRouteFor says they belong.
+ * Create an account. Same shell, same carousel and the same form as /login —
+ * only the mode differs, which is what decides the copy, the action it calls
+ * and where the footer link points.
  */
-export default async function LoginPage({
+export default async function SignUpPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
@@ -20,8 +19,8 @@ export default async function LoginPage({
 
   return (
     <AuthSplitLayout
-      title={es.auth.login.title}
-      subtitle={es.auth.login.subtitle}
+      title={es.auth.signup.title}
+      subtitle={es.auth.signup.subtitle}
       contentClassName="max-w-[380px]"
     >
       {errorMessage ? (
@@ -33,7 +32,7 @@ export default async function LoginPage({
         </p>
       ) : null}
 
-      <AuthForm mode="login" />
+      <AuthForm mode="signup" />
     </AuthSplitLayout>
   );
 }
