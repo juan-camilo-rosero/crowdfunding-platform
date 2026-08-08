@@ -201,3 +201,46 @@ export async function removeProjectPhoto(input: {
   revalidatePath(ADMIN_ROUTE);
   return { ok: true, photos };
 }
+
+/**
+ * Makes one photo the cover, by moving it to the front of the list.
+ *
+ * The catalogue and the gallery both read main_photos[0], so the cover IS the
+ * order. Before this the only way to change it was to delete every photo ahead
+ * of the one you wanted — with seven photos, seven deletions and seven
+ * re-uploads. Nothing is uploaded or removed here; only the order changes.
+ */
+export async function setProjectCoverPhoto(input: {
+  projectId: string;
+  url: string;
+}): Promise<ProjectPhotosResult> {
+  const supabase = await requireAdmin();
+  if (!supabase) {
+    return { ok: false, error: es.admin.photos.errors.notAdmin };
+  }
+
+  const { projectId, url } = input;
+  const current = await readPhotos(supabase, projectId);
+  if (current === null) {
+    return { ok: false, error: es.admin.photos.errors.projectNotFound };
+  }
+
+  // A url that is not on the list would silently reorder nothing; say so.
+  if (!current.includes(url)) {
+    return { ok: false, error: es.admin.photos.errors.photoNotFound };
+  }
+
+  const photos = [url, ...current.filter((photo) => photo !== url)];
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ main_photos: photos, updated_at: new Date().toISOString() })
+    .eq("id", projectId);
+
+  if (error) {
+    return { ok: false, error: es.admin.photos.errors.saveFailed };
+  }
+
+  revalidatePath(ADMIN_ROUTE);
+  return { ok: true, photos };
+}

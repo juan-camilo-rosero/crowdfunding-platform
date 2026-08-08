@@ -36,8 +36,8 @@ import { RequestFilters } from "./RequestFilters";
  */
 const COLUMNS: TableColumn[] = [
   { key: "requestedAt", label: es.requests.columns.date, type: "date" },
-  { key: "fromProjectName", label: es.requests.columns.from, type: "text", width: 220 },
-  { key: "toProjectName", label: es.requests.columns.to, type: "text", width: 220 },
+  { key: "fromProjectName", label: es.requests.columns.from, type: "project", width: 220 },
+  { key: "toProjectName", label: es.requests.columns.to, type: "project", width: 220 },
   { key: "amount", label: es.requests.columns.amount, type: "currency" },
   { key: "status", label: es.requests.columns.status, type: "select", width: 160 },
 ];

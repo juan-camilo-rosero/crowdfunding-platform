@@ -1,5 +1,6 @@
 import { CheckIcon } from "lucide-react";
 import { es } from "@/i18n";
+import { isClosedToInvestment } from "@/lib/projects/enums";
 import { RETURN_TEXT_SIZE, projectTitle } from "@/lib/projects/labels";
 import { cn } from "@/lib/utils";
 import { ProjectCardBar } from "@/components/cards/ProjectCardBar";
@@ -17,6 +18,8 @@ export type CatalogProjectCardProps = {
   city: string | null;
   /** projects.status — rendered through the status label map. */
   status: string | null;
+  /** projects.progress, 0–100. With the status, decides if it still takes capital. */
+  progress?: number | null;
   /** First entry of projects.main_photos; a placeholder shows when absent. */
   imageUrl?: string | null;
   /** projects.fundraising_goal. Null means the project is not raising. */
@@ -28,6 +31,8 @@ export type CatalogProjectCardProps = {
    * text, shown verbatim. Null when the project has not published one.
    */
   offeredReturn?: string | null;
+  /** True when the round has already met its goal. */
+  fullyFunded?: boolean;
   /** True when the signed-in user already holds a position in this project. */
   isInvested?: boolean;
   className?: string;
@@ -52,20 +57,30 @@ export function CatalogProjectCard({
   type,
   city,
   status,
+  progress,
   imageUrl,
   fundraisingGoal,
   capitalRaised,
   offeredReturn,
+  fullyFunded = false,
   isInvested = false,
   className,
 }: CatalogProjectCardProps) {
   const publishedReturn = offeredReturn?.trim();
 
+  // Finished or already producing: still shown as track record, but nothing on
+  // the card should read as an opportunity.
+  const closed = isClosedToInvestment({ status, progress });
+
   return (
     <ProjectCardShell
       projectId={projectId}
       action={es.investmentCard.seeMore}
-      className={className}
+      // Dimmed rather than hidden or disabled: it must stay readable and
+      // clickable — an investor may hold capital here — while clearly reading
+      // as "not on offer". The hover lift is deliberately small: jumping back
+      // to full opacity read as the card switching on and off.
+      className={cn(closed && "opacity-70 hover:opacity-85", className)}
     >
       <ProjectCardMedia imageUrl={imageUrl} name={name} status={status} />
 
@@ -77,6 +92,19 @@ export function CatalogProjectCard({
         {/* Context, not a call to action: a quiet chip that tells the investor
             they already hold this project without changing the rest of the
             card. Absent for everyone else. */}
+        {closed ? (
+          <span className="inline-flex w-fit items-center gap-1 rounded-[500px] bg-status-neutral px-2 py-0.5 text-xs font-medium text-status-neutral-foreground">
+            {es.catalog.closedToInvestment}
+          </span>
+        ) : fullyFunded ? (
+          // A covered round is NOT a closed project: the work is often just
+          // starting and the team still wants to hear from people. So it is
+          // labelled but never dimmed, and the detail screen stays whole.
+          <span className="inline-flex w-fit items-center gap-1 rounded-[500px] bg-status-success px-2 py-0.5 text-xs font-medium text-status-success-foreground">
+            {es.catalog.fullyFunded}
+          </span>
+        ) : null}
+
         {isInvested ? (
           <span className="inline-flex w-fit items-center gap-1 rounded-[500px] bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
             <CheckIcon className="size-3" aria-hidden="true" />
@@ -97,7 +125,7 @@ export function CatalogProjectCard({
           but a project with no published return says so plainly rather than
           rendering a dash where a figure belongs. */}
       <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
-        {publishedReturn ? (
+        {publishedReturn && !closed ? (
           <>
             <p
               className={cn(

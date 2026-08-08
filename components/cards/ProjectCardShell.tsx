@@ -33,7 +33,7 @@ export function ProjectCardShell({
     <Link
       href={`/proyecto/${projectId}`}
       className={cn(
-        "group flex h-full w-full cursor-pointer flex-col gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 p-4 transition-shadow hover:shadow-md",
+        "group flex h-full w-full cursor-pointer flex-col gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 p-4 transition hover:shadow-md",
         className
       )}
     >

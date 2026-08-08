@@ -26,6 +26,28 @@ export function isTransactionType(value: unknown): value is TransactionType {
 }
 
 /**
+ * Badge colour for a movement type.
+ *
+ * Green for yield: money earned. Red for a capital return: money leaving the
+ * project and going back. The pair is the one distinction an investor scans
+ * for, and CLAUDE.md forbids ever merging them — different colours make that
+ * separation visible at a glance. Contributions and reassignments are neutral:
+ * neither is a gain or a loss.
+ */
+export function transactionVariant(
+  type: string | null
+): "success" | "danger" | "neutral" {
+  switch (type) {
+    case "rendimiento":
+      return "success";
+    case "devolución de capital":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+/**
  * Whether the movement puts capital INTO a project or returns value TO the
  * investor. Used only for a discreet colour cue — no signs are invented, and
  * the amounts stay positive exactly as stored.

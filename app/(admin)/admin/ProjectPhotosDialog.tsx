@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { ImageIcon, TrashIcon, UploadIcon } from "lucide-react";
+import { ImageIcon, StarIcon, TrashIcon, UploadIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { ACCEPTED_IMAGE_TYPES } from "@/lib/projects/photos";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { removeProjectPhoto, uploadProjectPhotos } from "./photo-actions";
+import {
+  removeProjectPhoto,
+  setProjectCoverPhoto,
+  uploadProjectPhotos,
+} from "./photo-actions";
 
 export type ProjectPhotosDialogProps = {
   projectId: string;
@@ -68,6 +72,20 @@ export function ProjectPhotosDialog({
     files.forEach((file) => formData.append("files", file));
 
     const result = await uploadProjectPhotos(formData);
+
+    setIsBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    commit(result.photos);
+  }
+
+  async function handleMakeCover(url: string) {
+    setIsBusy(true);
+    setError(null);
+
+    const result = await setProjectCoverPhoto({ projectId, url });
 
     setIsBusy(false);
     if (!result.ok) {
@@ -140,6 +158,24 @@ export function ProjectPhotosDialog({
                   <span className="absolute top-1.5 left-1.5 rounded-[500px] bg-brand px-2 py-0.5 text-xs font-medium text-brand-foreground">
                     {es.admin.photos.coverBadge}
                   </span>
+                ) : null}
+
+                {/* Only offered where it would change something. */}
+                {index !== 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleMakeCover(url)}
+                    disabled={isBusy}
+                    aria-label={es.admin.photos.makeCoverLabel}
+                    title={es.admin.photos.makeCoverLabel}
+                    className={cn(
+                      "absolute top-1.5 left-1.5 flex size-7 cursor-pointer items-center justify-center rounded-[5px]",
+                      "bg-elevated/90 text-ink-700 transition-colors hover:bg-brand hover:text-brand-foreground",
+                      "disabled:cursor-default disabled:opacity-50"
+                    )}
+                  >
+                    <StarIcon className="size-3.5" aria-hidden="true" />
+                  </button>
                 ) : null}
 
                 <button

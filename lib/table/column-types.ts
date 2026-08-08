@@ -5,6 +5,7 @@ import {
   CircleDotIcon,
   DollarSignIcon,
   DownloadIcon,
+  HomeIcon,
   HashIcon,
   LinkIcon,
   ListIcon,
@@ -34,6 +35,12 @@ export type ColumnDataType =
   | "date"
   | "select"
   | "boolean"
+  /**
+   * A project's name. Reads and validates exactly like text; it exists so the
+   * header carries a building icon instead of the generic "T", which made every
+   * project column look like free-form prose.
+   */
+  | "project"
   /**
    * Column that holds a CONTROL rather than a value — a download button, for
    * instance. Only ReadOnlyDataTable renders it, always through `renderCell`;
@@ -79,6 +86,7 @@ export const COLUMN_TYPE_META: Record<ColumnDataType, ColumnTypeMeta> = {
   // Lucide has no checkbox-ish "boolean" glyph that reads well at 16px;
   // the toggle communicates the two-state nature best.
   boolean: { icon: ToggleLeftIcon, input: "checkbox", align: "left" },
+  project: { icon: HomeIcon, input: "text", align: "left" },
   // Never edited: the cell content comes from the caller's renderCell.
   action: { icon: DownloadIcon, input: "text", align: "left" },
 };

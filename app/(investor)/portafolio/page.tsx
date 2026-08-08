@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   findProgressRange,
   hasActiveFilters,
+  isFullyFunded,
   parseCatalogFilters,
   sortCatalogProjects,
 } from "@/lib/projects/catalog";
@@ -83,12 +84,12 @@ export default async function CatalogPage({
   }
 
   const { data: projectRows, error } = await query;
-  const projects = sortCatalogProjects(projectRows ?? []);
+  const found = projectRows ?? [];
 
   // Raised capital per project. project_totals cannot be used here: it is
   // security_invoker, so it would only count the contributions THIS user may
   // read — zero for a visitor. project_fundraising is the public aggregate.
-  const projectIds = projects.map((project) => project.id);
+  const projectIds = found.map((project) => project.id);
   const { data: fundraisingRows } = projectIds.length
     ? await supabase
         .from("project_fundraising")
@@ -96,12 +97,19 @@ export default async function CatalogPage({
         .in("project_id", projectIds)
     : { data: [] };
 
-  const raisedByProject = new Map(
-    (fundraisingRows ?? []).map((row) => [
-      row.project_id,
-      Number(row.capital_raised ?? 0),
-    ])
+  // project_id is nullable on the view's type; the rows that matter always
+  // carry one, and dropping the rest keeps the map keyed by a plain string.
+  const raisedByProject = new Map<string, number>(
+    (fundraisingRows ?? [])
+      .filter((row): row is { project_id: string; capital_raised: number | null } =>
+        !!row.project_id
+      )
+      .map((row) => [row.project_id, Number(row.capital_raised ?? 0)])
   );
+
+  // Sorted only now: whether a round is already covered depends on the raised
+  // figures, and those arrive with the query above.
+  const projects = sortCatalogProjects(found, raisedByProject);
   // One cached read per request, shared with the layout's sidebar check.
   const investorIds = await getInvestorIds();
 
@@ -161,9 +169,14 @@ export default async function CatalogPage({
                   type={project.type}
                   city={project.city}
                   status={project.status}
+                  progress={project.progress}
                   imageUrl={project.main_photos?.[0] ?? null}
                   fundraisingGoal={project.fundraising_goal}
                   capitalRaised={raisedByProject.get(project.id) ?? 0}
+                  fullyFunded={isFullyFunded(
+                    project,
+                    raisedByProject.get(project.id) ?? 0
+                  )}
                   offeredReturn={project.offered_return}
                   isInvested={investedProjectIds.has(project.id)}
                 />

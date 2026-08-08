@@ -16,6 +16,11 @@ export type ProjectSummaryProps = {
   sellingPoints: Json | null;
   /** Terms offered by the calculator. See the TODO on the page. */
   terms: ReturnTerm[];
+  /**
+   * Hides the return calculator. A project that no longer takes capital must
+   * not offer a tool for estimating what investing in it would yield.
+   */
+  closedToInvestment?: boolean;
 };
 
 /**
@@ -28,6 +33,7 @@ export function ProjectSummary({
   description,
   sellingPoints,
   terms,
+  closedToInvestment = false,
 }: ProjectSummaryProps) {
   const paragraphs = toParagraphs(description);
   const points = parseSellingPoints(sellingPoints);
@@ -48,7 +54,7 @@ export function ProjectSummary({
         )}
       </div>
 
-      <ReturnCalculator terms={terms} />
+      {closedToInvestment ? null : <ReturnCalculator terms={terms} />}
 
       <section className="flex flex-col gap-4">
         <h3 className="text-2xl font-medium text-slate-950">

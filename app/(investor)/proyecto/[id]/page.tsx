@@ -9,6 +9,7 @@ import {
   getInvestorIds,
 } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { isClosedToInvestment } from "@/lib/projects/enums";
 import { projectStatusLabel, projectTitle } from "@/lib/projects/labels";
 import { ProjectGallery } from "@/components/project/ProjectGallery";
 import { ProjectSummary } from "@/components/project/ProjectSummary";
@@ -220,6 +221,12 @@ export default async function ProjectDetailPage({
     fileUrl: row.file_url,
   }));
 
+  // Finished or already producing: the screen keeps informing but stops
+  // inviting. Everything factual stays — gallery, progress, reports, documents
+  // and the investor's own position — and only what solicits capital goes: the
+  // return calculator and the interest form.
+  const closedToInvestment = isClosedToInvestment(project);
+
   const statusLabel = projectStatusLabel(project.status);
   const subtitle =
     project.progress !== null && project.progress !== undefined
@@ -236,6 +243,7 @@ export default async function ProjectDetailPage({
           description={project.description}
           sellingPoints={project.selling_points}
           terms={MOCK_RETURN_TERMS}
+          closedToInvestment={closedToInvestment}
         />
       ),
     },
@@ -294,7 +302,24 @@ export default async function ProjectDetailPage({
         <aside className="col-span-12 lg:col-span-4">
           {/* Sticky only where there is a column to be sticky in. */}
           <div className="lg:sticky lg:top-6">
-            <InterestForm projectId={project.id} />
+            {closedToInvestment ? (
+              <div className="flex flex-col gap-3 rounded-[10px] border border-neutral-200 bg-stone-50 p-6">
+                <h2 className="text-xl font-medium text-stone-900">
+                  {es.projectDetail.closedTitle}
+                </h2>
+                <p className="text-sm text-zinc-600">
+                  {es.projectDetail.closedHint}
+                </p>
+                <Link
+                  href={CATALOG_ROUTE}
+                  className="mt-1 flex h-10 w-fit cursor-pointer items-center justify-center rounded-[10px] bg-stone-900 px-5 text-base font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  {es.projectDetail.closedAction}
+                </Link>
+              </div>
+            ) : (
+              <InterestForm projectId={project.id} />
+            )}
           </div>
         </aside>
       </div>

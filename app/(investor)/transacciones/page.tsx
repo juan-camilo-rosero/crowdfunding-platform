@@ -15,9 +15,9 @@ import {
   fetchTransactionFilterOptions,
   type TransactionsClient,
 } from "@/lib/transactions/query";
-import { transactionDirection } from "@/lib/transactions/types";
+import { transactionVariant } from "@/lib/transactions/types";
 import type { TableColumn, TableRow } from "@/lib/table/types";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
@@ -35,7 +35,7 @@ const COLUMNS: TableColumn[] = [
   {
     key: "projectName",
     label: es.transactions.columns.project,
-    type: "text",
+    type: "project",
     width: 240,
   },
   { key: "type", label: es.transactions.columns.type, type: "select" },
@@ -140,18 +140,10 @@ export default async function TransactionsPage({
               if (column.key === "type") {
                 const type = row.type ? String(row.type) : null;
                 if (!type) return "";
-                const direction = transactionDirection(type);
                 return (
-                  <span
-                    className={cn(
-                      "font-medium",
-                      direction === "in" && "text-stone-900",
-                      direction === "out" && "text-emerald-700",
-                      direction === "neutral" && "text-zinc-500"
-                    )}
-                  >
+                  <Badge variant={transactionVariant(type)}>
                     {es.transactions.type[type] ?? type}
-                  </span>
+                  </Badge>
                 );
               }
               return undefined;

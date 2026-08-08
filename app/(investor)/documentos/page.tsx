@@ -28,7 +28,7 @@ import { DownloadButton } from "./DownloadButton";
  */
 const COLUMNS: TableColumn[] = [
   { key: "docType", label: es.documents.columns.docType, type: "select", width: 220 },
-  { key: "projectName", label: es.documents.columns.project, type: "text", width: 240 },
+  { key: "projectName", label: es.documents.columns.project, type: "project", width: 240 },
   { key: "date", label: es.documents.columns.date, type: "date" },
   { key: "download", label: es.documents.columns.download, type: "action", width: 170 },
 ];

@@ -1,8 +1,8 @@
 import {
-  CLOSED_PROJECT_STATUSES,
   PROJECT_CITIES,
   PROJECT_STATUSES,
   PROJECT_TYPES,
+  isClosedToInvestment,
 } from "@/lib/projects/enums";
 
 /**
@@ -91,28 +91,54 @@ export function findProgressRange(id: ProgressRangeId | null) {
   return PROGRESS_RANGES.find((range) => range.id === id) ?? null;
 }
 
+/** True when a raising project has already met its goal. */
+export function isFullyFunded(
+  project: { fundraising_goal?: number | null },
+  raised: number
+): boolean {
+  const goal = project.fundraising_goal;
+  return !!goal && goal > 0 && raised >= goal;
+}
+
 /**
- * Display order of the catalogue.
+ * Display order of the catalogue: a gradient from "act now" to "track record".
  *
- * The screen exists to raise capital, so what an investor can act on comes
- * first: projects currently raising, then the rest of the open ones, and closed
- * projects last — those are shown as track record, not as an opportunity.
+ *   0  raising, still short of the goal — the only ones an investor can move on
+ *   1  raising but already fully funded — real, but the round is covered
+ *   2  open, not currently raising
+ *   3  closed to investment — history, and deliberately last
  */
 function catalogRank(project: {
   status: string | null;
+  progress?: number | null;
   in_fundraising: boolean | null;
+  fullyFunded?: boolean;
 }): number {
-  if (project.status && CLOSED_PROJECT_STATUSES.includes(project.status)) {
-    return 2;
-  }
-  return project.in_fundraising ? 0 : 1;
+  if (isClosedToInvestment(project)) return 3;
+  if (!project.in_fundraising) return 2;
+  return project.fullyFunded ? 1 : 0;
 }
 
 export function sortCatalogProjects<
-  T extends { status: string | null; in_fundraising: boolean | null; name: string },
->(projects: T[]): T[] {
+  T extends {
+    id: string;
+    status: string | null;
+    progress?: number | null;
+    in_fundraising: boolean | null;
+    fundraising_goal?: number | null;
+    name: string;
+  },
+>(projects: T[], raisedByProject?: Map<string, number>): T[] {
   // Sorting a copy: the caller's array (a query result) is left untouched.
-  return [...projects].sort(
-    (a, b) => catalogRank(a) - catalogRank(b) || a.name.localeCompare(b.name, "es")
-  );
+  return [...projects].sort((a, b) => {
+    const rankA = catalogRank({
+      ...a,
+      fullyFunded: isFullyFunded(a, raisedByProject?.get(a.id) ?? 0),
+    });
+    const rankB = catalogRank({
+      ...b,
+      fullyFunded: isFullyFunded(b, raisedByProject?.get(b.id) ?? 0),
+    });
+    return rankA - rankB || a.name.localeCompare(b.name, "es");
+  });
 }

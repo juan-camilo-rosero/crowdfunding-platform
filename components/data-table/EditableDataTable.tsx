@@ -179,19 +179,42 @@ export function EditableDataTable({
   return (
     // Scrollbar hidden: it used to overlay the last row. Scroll with a trackpad
     // or shift+wheel.
-    <div className="w-full overflow-x-auto rounded-[5px] border border-line scrollbar-none selection:bg-brand selection:text-elevated">
+    // Scrolls in BOTH axes inside itself, which is what makes the sticky header
+    // work: `overflow-x-auto` alone already turns this into a scrollport, so a
+    // `sticky top-0` child anchors here rather than to the page — and with no
+    // height limit the container never scrolls vertically, so the header never
+    // appeared to stick. Capping the height gives it something to stick to.
+    <div className="max-h-[70vh] w-full overflow-auto rounded-[5px] border border-line scrollbar-none selection:bg-brand selection:text-elevated">
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
-        <div className={cn(HEADER_HEIGHT, "flex border-b border-line bg-surface")}>
+        {/* Sticky header: the labels stay visible down a long table. z-30 so it
+            also covers the sticky first column as it scrolls under. */}
+        <div
+          className={cn(
+            HEADER_HEIGHT,
+            "sticky top-0 z-30 flex border-b border-line bg-surface"
+          )}
+        >
           <div
-            style={{ width: INDEX_COLUMN_WIDTH }}
-            className="shrink-0 border-r border-line"
+            style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
+            className="sticky z-10 shrink-0 border-r border-line bg-surface max-md:static"
           />
           {columns.map((column, columnIndex) => (
             <div
               key={column.key}
-              style={{ width: widths[columnIndex] }}
-              className="shrink-0 border-r border-line last:border-r-0"
+              style={{
+                width: widths[columnIndex],
+                ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
+              }}
+              className={cn(
+                "shrink-0 border-r border-line last:border-r-0",
+                // The first column identifies the record, so it stays put while
+                // the rest scrolls sideways. Sticky is relative to this grid's
+                // own scroll container, not the viewport, so the sidebar to the
+                // left is never covered. Dropped under md, where the screen is
+                // too narrow to give a frozen column away.
+                columnIndex === 0 && "sticky z-10 bg-surface max-md:static"
+              )}
             >
               <DataTableHeaderCell column={column} />
             </div>
@@ -213,16 +236,22 @@ export function EditableDataTable({
             className={cn(ROW_HEIGHT, "flex border-b border-line")}
           >
             <div
-              style={{ width: INDEX_COLUMN_WIDTH }}
-              className="flex shrink-0 items-center justify-center border-r border-line bg-elevated text-base font-normal text-ink-700"
+              style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
+              className="sticky z-10 flex shrink-0 items-center justify-center border-r border-line bg-elevated text-base font-normal text-ink-700 max-md:static"
             >
               {rowIndex + 1}
             </div>
             {columns.map((column, columnIndex) => (
               <div
                 key={column.key}
-                style={{ width: widths[columnIndex] }}
-                className="shrink-0 border-r border-line bg-elevated last:border-r-0"
+                style={{
+                  width: widths[columnIndex],
+                  ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
+                }}
+                className={cn(
+                  "shrink-0 border-r border-line bg-elevated last:border-r-0",
+                  columnIndex === 0 && "sticky z-10 max-md:static"
+                )}
               >
                 <EditableCell
                   column={column}
@@ -251,16 +280,22 @@ export function EditableDataTable({
             className={cn(ROW_HEIGHT, "flex")}
           >
             <div
-              style={{ width: INDEX_COLUMN_WIDTH }}
-              className="flex shrink-0 items-center justify-center border-r border-line bg-elevated text-ink-700"
+              style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
+              className="sticky z-10 flex shrink-0 items-center justify-center border-r border-line bg-elevated text-ink-700 max-md:static"
             >
               <PlusIcon className="size-4" aria-hidden="true" />
             </div>
             {columns.map((column, columnIndex) => (
               <div
                 key={column.key}
-                style={{ width: widths[columnIndex] }}
-                className="shrink-0 border-r border-line bg-elevated last:border-r-0"
+                style={{
+                  width: widths[columnIndex],
+                  ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
+                }}
+                className={cn(
+                  "shrink-0 border-r border-line bg-elevated last:border-r-0",
+                  columnIndex === 0 && "sticky z-10 max-md:static"
+                )}
               >
                 <EditableCell
                   column={column}

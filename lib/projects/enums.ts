@@ -42,3 +42,30 @@ export const PROJECT_STATUSES = [
  * sorts them last when they are shown.
  */
 export const CLOSED_PROJECT_STATUSES: readonly string[] = ["vendido"];
+
+/**
+ * Statuses that mean the project no longer takes capital.
+ *
+ * `vendido` is finished; `rentado` is already producing income and closed to
+ * new money. Both are worth SHOWING — they are the group's track record — but
+ * neither is an opportunity.
+ */
+export const NOT_INVESTABLE_STATUSES: readonly string[] = ["vendido", "rentado"];
+
+/**
+ * Whether a project is closed to new investment.
+ *
+ * Two ways to get there: a status that means it is done, or work finished
+ * (progress at 100%). The screens use this to stop inviting an investment that
+ * cannot happen — without hiding the project, which would leave an investor who
+ * holds capital in it unable to find it.
+ */
+export function isClosedToInvestment(project: {
+  status?: string | null;
+  progress?: number | null;
+}): boolean {
+  if (project.status && NOT_INVESTABLE_STATUSES.includes(project.status)) {
+    return true;
+  }
+  return typeof project.progress === "number" && project.progress >= 100;
+}

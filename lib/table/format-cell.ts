@@ -45,6 +45,7 @@ export function defaultColumnWidth(type: ColumnDataType): number {
       return 240;
     case "text":
     case "select":
+    case "project":
       return 200;
     case "phone":
       return 160;

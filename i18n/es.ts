@@ -173,6 +173,12 @@ export const es = {
     offeredReturn: "Retorno ofrecido",
     returnOnRequest: "Condiciones disponibles con el equipo",
     alreadyInvested: "Ya inviertes aquí",
+    // Shown on a project that no longer takes capital: it stays visible as
+    // track record, but nothing on it invites an investment.
+    closedToInvestment: "No disponible para inversión",
+    // The round met its goal. Distinct from being closed: the project is alive
+    // and the team still takes enquiries, so this only sets expectations.
+    fullyFunded: "Captación completa",
 
     // No project matches the current filter combination.
     emptyFiltered: "Ningún proyecto coincide con estos filtros",
@@ -637,6 +643,12 @@ export const es = {
       untitled: "Documento sin nombre",
     },
 
+    // Banner replacing the interest form on a project closed to new capital.
+    closedTitle: "Este proyecto ya no recibe inversión",
+    closedHint:
+      "Puedes seguir consultando su avance, sus reportes y sus documentos. Si te interesa invertir, escríbenos y te contamos qué proyectos están abiertos.",
+    closedAction: "Ver proyectos abiertos",
+
     myInvestment: {
       title: "Mi inversión en este proyecto",
 
@@ -763,6 +775,7 @@ export const es = {
       addLabel: "Agregar imagen",
       uploading: "Subiendo…",
       removeLabel: "Quitar esta imagen",
+      makeCoverLabel: "Usar como portada",
       empty: "Este proyecto todavía no tiene fotos",
       emptyHint: "La primera que subas será la portada en el catálogo.",
       // Says which one the catalogue picks up, since it uses the first.
@@ -776,6 +789,7 @@ export const es = {
         badType: "Ese formato no es válido. Usa JPG, PNG, WebP o AVIF.",
         tooLarge: "La imagen supera los 30 MB.",
         projectNotFound: "No encontramos ese proyecto.",
+        photoNotFound: "Esa imagen ya no está en el proyecto.",
         uploadFailed: "No pudimos subir la imagen. Inténtalo de nuevo.",
         saveFailed: "No pudimos guardar los cambios. Inténtalo de nuevo.",
       },
