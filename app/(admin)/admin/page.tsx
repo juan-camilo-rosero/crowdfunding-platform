@@ -5,9 +5,11 @@ import type { TableRow } from "@/lib/table/types";
 import { AdminTablesPanel } from "./AdminTablesPanel";
 import {
   ADMIN_TABLES,
+  INVESTOR_COLUMN_KEY,
   PROJECT_COLUMN_KEY,
   findAdminTable,
-  withProjectOptions,
+  needsReference,
+  withReferenceOptions,
 } from "./table-definitions";
 
 /**
@@ -25,25 +27,30 @@ export default async function AdminHomePage({
 
   const supabase = await createClient();
 
-  const needsProjects = baseDefinition.columns.some(
-    (column) => column.key === PROJECT_COLUMN_KEY
-  );
+  // Only the tables that actually reference them pay for the extra reads.
+  const wantsProjects = needsReference(baseDefinition, PROJECT_COLUMN_KEY);
+  const wantsInvestors = needsReference(baseDefinition, INVESTOR_COLUMN_KEY);
 
-  const [{ data, error }, projectsResult] = await Promise.all([
+  const [{ data, error }, projectsResult, investorsResult] = await Promise.all([
     supabase
       .from(baseDefinition.source)
       .select("*")
       .order(baseDefinition.orderBy ?? "created_at", { ascending: true })
       .limit(100),
-    needsProjects
+    wantsProjects
       ? supabase.from("projects").select("id, name").order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    wantsInvestors
+      ? supabase.from("investors").select("id, full_name, email").order("full_name")
+      : Promise.resolve({
+          data: [] as { id: string; full_name: string; email: string | null }[],
+        }),
   ]);
 
-  const definition = withProjectOptions(
-    baseDefinition,
-    projectsResult.data ?? []
-  );
+  const definition = withReferenceOptions(baseDefinition, {
+    projects: projectsResult.data ?? [],
+    investors: investorsResult.data ?? [],
+  });
 
   const rows = (data ?? []) as TableRow[];
 

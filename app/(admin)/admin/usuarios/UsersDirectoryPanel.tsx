@@ -2,52 +2,72 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SearchIcon, UserPlusIcon } from "lucide-react";
+import { ActivityIcon, SearchIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { formatDate } from "@/lib/format";
-import type { ConvertibleUser } from "@/lib/users/convertible";
-import { searchConvertibleUsers } from "@/lib/users/query";
+import {
+  matchesFilter,
+  notConvertibleReason,
+  type DirectoryFilter,
+  type UserDirectoryEntry,
+} from "@/lib/users/convertible";
+import { searchUsers } from "@/lib/users/query";
 import type { TableColumn, TableRow } from "@/lib/table/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { FilterDropdown } from "@/components/filters/FilterDropdown";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
 import { convertVisitorToInvestor } from "./actions";
 
-export type ConvertibleUsersPanelProps = {
-  users: ConvertibleUser[];
+export type UsersDirectoryPanelProps = {
+  users: UserDirectoryEntry[];
 };
 
 const COLUMNS: TableColumn[] = [
-  { key: "fullName", label: es.adminUsers.columns.name, type: "text", width: 260 },
-  { key: "email", label: es.adminUsers.columns.email, type: "email", width: 260 },
+  { key: "fullName", label: es.adminUsers.columns.name, type: "text", width: 240 },
+  { key: "email", label: es.adminUsers.columns.email, type: "email", width: 240 },
+  { key: "state", label: es.adminUsers.columns.state, type: "select", width: 210 },
   { key: "createdAt", label: es.adminUsers.columns.registered, type: "date" },
   { key: "action", label: es.adminUsers.columns.action, type: "action", width: 230 },
 ];
 
+const FILTER_OPTIONS: { value: DirectoryFilter; label: string }[] = [
+  { value: "visitante", label: es.adminUsers.filter.visitor },
+  { value: "inversionista", label: es.adminUsers.filter.investor },
+  { value: "admin", label: es.adminUsers.filter.admin },
+];
+
 /**
- * The linking funnel: users waiting to be turned into investors.
+ * The admin's user directory, and the place a visitor becomes an investor.
  *
- * Search is client-side on purpose. The list is bounded by "people who signed
- * up and have not been linked yet" — a queue an admin is expected to drain, not
- * a growing archive — so filtering in memory avoids a round trip per keystroke.
- * If it ever stops being a queue, this moves to the URL like the other filters.
+ * It lists EVERYONE rather than only the people pending conversion. That is the
+ * difference that makes it usable at scale: an admin can see where any person
+ * stands, and a conversion visibly changes a row instead of making it vanish.
+ *
+ * Search and the state filter are client-side. This is a queue an admin works
+ * through, bounded by "people who have signed up", so filtering in memory
+ * avoids a round trip per keystroke. If the list ever stops being scannable it
+ * moves to the URL like the catalogue's filters.
  */
-export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
+export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
   const router = useRouter();
 
   const [query, setQuery] = useState("");
-  const [target, setTarget] = useState<ConvertibleUser | null>(null);
+  const [filter, setFilter] = useState<DirectoryFilter>("todos");
+  const [target, setTarget] = useState<UserDirectoryEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const visible = useMemo(
-    () => searchConvertibleUsers(users, query),
-    [users, query]
+    () => searchUsers(users, query).filter((user) => matchesFilter(user, filter)),
+    [users, query, filter]
   );
+
+  const isNarrowed = query.trim().length > 0 || filter !== "todos";
 
   const countLabel =
     visible.length === 1
@@ -77,7 +97,7 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
     );
     setTarget(null);
     // revalidatePath already refreshed the server data; this re-renders it, so
-    // the converted person drops off the list.
+    // the row now reads "Inversionista" instead of disappearing.
     router.refresh();
   }
 
@@ -93,16 +113,29 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <Input
-          type="search"
-          inputSize="xl"
-          icon={<SearchIcon />}
-          className="max-w-sm rounded-[5px]"
-          placeholder={es.adminUsers.searchPlaceholder}
-          aria-label={es.adminUsers.searchPlaceholder}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="search"
+            inputSize="xl"
+            icon={<SearchIcon />}
+            className="max-w-sm rounded-[5px]"
+            placeholder={es.adminUsers.searchPlaceholder}
+            aria-label={es.adminUsers.searchPlaceholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+
+          <FilterDropdown
+            icon={<ActivityIcon />}
+            ariaLabel={es.adminUsers.filter.label}
+            placeholder={es.adminUsers.filter.label}
+            clearLabel={es.adminUsers.filter.all}
+            options={FILTER_OPTIONS}
+            value={filter === "todos" ? null : filter}
+            onSelect={(value) => setFilter((value as DirectoryFilter) ?? "todos")}
+          />
+        </div>
+
         <p aria-live="polite" className="text-sm text-ink-500">
           {countLabel}
         </p>
@@ -113,24 +146,55 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
         columns={COLUMNS}
         rows={visible as unknown as TableRow[]}
         renderCell={(row, column) => {
+          const user = row as unknown as UserDirectoryEntry;
+
           if (column.key === "fullName") {
-            const name = row.fullName ? String(row.fullName) : null;
             return (
-              <span className="flex flex-wrap items-center gap-2">
-                <span className={name ? "" : "text-ink-400"}>
-                  {name ?? es.adminUsers.noName}
-                </span>
+              <span className={user.fullName ? "" : "text-ink-400"}>
+                {user.fullName ?? es.adminUsers.noName}
+              </span>
+            );
+          }
+
+          if (column.key === "state") {
+            return (
+              <span className="flex flex-wrap items-center gap-1.5">
+                {/* Both capabilities can be true at once — the owner runs the
+                    business and has also invested — so this renders badges
+                    rather than picking one label. */}
+                {user.isAdmin ? (
+                  <Badge variant="neutral">{es.adminUsers.state.admin}</Badge>
+                ) : null}
+                {user.isInvestor ? (
+                  <Badge variant="success">{es.adminUsers.state.investor}</Badge>
+                ) : null}
+                {!user.isAdmin && !user.isInvestor ? (
+                  <Badge variant="warning">{es.adminUsers.state.visitor}</Badge>
+                ) : null}
                 {/* Tells the admin this will CONNECT, not create. */}
-                {row.hasMatchingProspect ? (
-                  <Badge variant="warning">{es.adminUsers.hasProspect}</Badge>
+                {user.hasMatchingProspect && user.canConvert ? (
+                  <Badge variant="neutral">{es.adminUsers.hasProspect}</Badge>
                 ) : null}
               </span>
             );
           }
+
           if (column.key === "createdAt") {
-            return row.createdAt ? formatDate(String(row.createdAt)) : "";
+            return user.createdAt ? formatDate(user.createdAt) : "";
           }
+
           if (column.key === "action") {
+            const reason = notConvertibleReason(user);
+            // A reason instead of a dead button: the row says why, and the
+            // condition is the same one the Server Action enforces.
+            if (reason) {
+              return (
+                <span className="text-sm text-ink-400">
+                  {es.adminUsers.cannotConvert[reason]}
+                </span>
+              );
+            }
+
             return (
               <Button
                 type="button"
@@ -139,7 +203,7 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
                 onClick={() => {
                   setError(null);
                   setNotice(null);
-                  setTarget(row as unknown as ConvertibleUser);
+                  setTarget(user);
                 }}
               >
                 <UserPlusIcon data-icon="inline-start" aria-hidden="true" />
@@ -147,10 +211,11 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
               </Button>
             );
           }
+
           return undefined;
         }}
         emptyState={
-          query.trim() ? (
+          isNarrowed ? (
             <EmptyState
               icon={<SearchIcon />}
               title={es.adminUsers.emptySearch}
@@ -158,7 +223,7 @@ export function ConvertibleUsersPanel({ users }: ConvertibleUsersPanelProps) {
             />
           ) : (
             <EmptyState
-              icon={<UserPlusIcon />}
+              icon={<UsersIcon />}
               title={es.adminUsers.empty}
               hint={es.adminUsers.emptyHint}
             />

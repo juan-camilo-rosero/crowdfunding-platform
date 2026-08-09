@@ -7,6 +7,7 @@ import {
   HomeIcon,
   InboxIcon,
   LayoutGridIcon,
+  UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 import { es } from "@/i18n";
@@ -47,11 +48,14 @@ export const CATALOG_NAV_ITEM: NavItem = {
 /**
  * "Admin" group. Requires users.role = 'admin'.
  *
- * Only these two entries live in the sidebar; the rest of the admin screens
- * (proyectos, capital, usuarios, aprobaciones…) are reached from inside the
- * admin panel, not from here.
+ * The data tables (proyectos, capital, documentos…) are NOT here: they are tabs
+ * inside the panel, reached with ?tabla=. Only the screens that are their own
+ * destination get an entry — and "Usuarios" is one of them, because turning a
+ * visitor into an investor is a task an admin comes looking for, not something
+ * stumbled upon inside a table.
  */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: es.nav.adminPanel, icon: DatabaseIcon, exact: true },
+  { href: "/admin/usuarios", label: es.nav.users, icon: UsersIcon },
   { href: "/admin/pipeline", label: es.nav.salesFunnel, icon: FilterIcon },
 ];

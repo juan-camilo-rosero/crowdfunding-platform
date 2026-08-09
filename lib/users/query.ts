@@ -1,10 +1,7 @@
-import {
-  normalizeEmail,
-  type ConvertibleUser,
-} from "./convertible";
+import { normalizeEmail, type UserDirectoryEntry } from "./convertible";
 
 /**
- * Reads for the linking funnel (/admin/usuarios).
+ * Reads for the admin's user directory (/admin/usuarios).
  *
  * Everything here runs as the ADMIN, under their own session, so RLS is what
  * authorises the wide reads: users_select_own admits any row when
@@ -31,6 +28,8 @@ type RawUser = {
   full_name: string | null;
   email: string;
   phone: string | null;
+  role: string | null;
+  onboarding_completed: boolean | null;
   created_at: string;
 };
 
@@ -39,41 +38,36 @@ type RawInvestor = {
   email: string | null;
 };
 
-export type ConvertibleUsersResult = {
-  users: ConvertibleUser[];
+export type UserDirectoryResult = {
+  users: UserDirectoryEntry[];
   failed: boolean;
 };
 
 /**
- * Users an admin can turn into investors.
+ * Every user, with the capabilities each one holds.
  *
- * The population is defined by three conditions, all of which matter:
+ * The directory lists EVERYONE on purpose. An earlier version returned only the
+ * people who could be converted, which meant that the moment an admin converted
+ * someone they vanished with no confirmation, and there was no way to see who
+ * was already an investor. Showing the whole set and marking each row is what
+ * makes the screen answer "where does this person stand?" instead of only
+ * "who is pending?".
  *
- *  · role != 'admin' — an admin is managed through the admin flow, not this
- *    one. (Note this does NOT exclude an admin who also invests; it excludes
- *    them from being converted HERE.)
- *  · onboarding_completed — someone who has not given their personal data has
- *    no name or phone to build a record from.
- *  · no linked row in `investors` — they are already an investor otherwise, and
- *    a second row would be a duplicate identity.
- *
- * The third condition cannot be expressed as a join in PostgREST without an
- * FK-embedded filter, so the linked ids are fetched once and subtracted here.
- * The set is small (the linked investors of the whole platform) and this keeps
- * the rule readable in one place.
+ * Whether someone is an investor cannot be expressed as a join in PostgREST
+ * without an FK-embedded filter, so the linked ids are fetched once and matched
+ * here. The set is small (the linked investors of the whole platform) and this
+ * keeps the rule readable in one place.
  */
-export async function getConvertibleUsers(
+export async function getUserDirectory(
   client: UsersClient
-): Promise<ConvertibleUsersResult> {
+): Promise<UserDirectoryResult> {
   const [usersResult, investorsResult] = await Promise.all([
     client
       .from("users")
-      .select("id, full_name, email, phone, created_at")
-      .neq("role", "admin")
-      .eq("onboarding_completed", true)
+      .select("id, full_name, email, phone, role, onboarding_completed, created_at")
       .order("created_at", { ascending: false }),
-    // Every investor row, linked or not: the linked ones exclude users, the
-    // unlinked ones flag a prospect waiting to be connected.
+    // Every investor row, linked or not: the linked ones mark a user as an
+    // investor, the unlinked ones flag a prospect waiting to be connected.
     client.from("investors").select("user_id, email"),
   ]);
 
@@ -84,9 +78,7 @@ export async function getConvertibleUsers(
   const investors = (investorsResult.data ?? []) as RawInvestor[];
 
   const linkedUserIds = new Set(
-    investors
-      .map((row) => row.user_id)
-      .filter((id): id is string => !!id)
+    investors.map((row) => row.user_id).filter((id): id is string => !!id)
   );
 
   // Emails of records that exist but belong to nobody yet (Camino A).
@@ -97,25 +89,34 @@ export async function getConvertibleUsers(
       .filter((email) => email.length > 0)
   );
 
-  const users = ((usersResult.data ?? []) as RawUser[])
-    .filter((user) => !linkedUserIds.has(user.id))
-    .map((user) => ({
+  const users = ((usersResult.data ?? []) as RawUser[]).map((user) => {
+    const isAdmin = user.role === "admin";
+    const isInvestor = linkedUserIds.has(user.id);
+    const onboardingCompleted = !!user.onboarding_completed;
+
+    return {
       id: user.id,
       fullName: user.full_name,
       email: user.email,
       phone: user.phone,
       createdAt: user.created_at,
+      isAdmin,
+      isInvestor,
+      onboardingCompleted,
       hasMatchingProspect: unlinkedEmails.has(normalizeEmail(user.email)),
-    }));
+      // The same three conditions the Server Action enforces.
+      canConvert: !isAdmin && !isInvestor && onboardingCompleted,
+    };
+  });
 
   return { users, failed: false };
 }
 
 /** Case-insensitive search over name and email, for the list's filter box. */
-export function searchConvertibleUsers(
-  users: ConvertibleUser[],
+export function searchUsers(
+  users: UserDirectoryEntry[],
   query: string
-): ConvertibleUser[] {
+): UserDirectoryEntry[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return users;
 

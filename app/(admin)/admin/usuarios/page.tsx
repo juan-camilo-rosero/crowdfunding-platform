@@ -1,15 +1,16 @@
 import { es } from "@/i18n";
 import { createClient } from "@/lib/supabase/server";
-import { getConvertibleUsers, type UsersClient } from "@/lib/users/query";
+import { getUserDirectory, type UsersClient } from "@/lib/users/query";
 import { PageTitle } from "@/components/layout/PageTitle";
-import { ConvertibleUsersPanel } from "./ConvertibleUsersPanel";
+import { UsersDirectoryPanel } from "./UsersDirectoryPanel";
 
 /**
- * Users — the linking funnel of Camino B (user-management.md).
+ * Users — the directory, and the linking funnel of Camino B
+ * (user-management.md).
  *
- * SCOPE: listing people who can become investors, and converting them. Managing
- * account status, granting or removing admin, and unlinking are a separate
- * screen; none of them is reachable from here.
+ * SCOPE: seeing where every person stands, and converting a visitor into an
+ * investor. Managing account status, granting or removing admin, and unlinking
+ * are a separate screen; none of them is reachable from here.
  *
  * ACCESS: proxy.ts restricts /admin/* to role = 'admin', and the reads below
  * run under the admin's own session — users_select_own and investors_select_own
@@ -18,7 +19,7 @@ import { ConvertibleUsersPanel } from "./ConvertibleUsersPanel";
  */
 export default async function AdminUsersPage() {
   const supabase = await createClient();
-  const { users, failed } = await getConvertibleUsers(
+  const { users, failed } = await getUserDirectory(
     supabase as unknown as UsersClient
   );
 
@@ -46,7 +47,7 @@ export default async function AdminUsersPage() {
           </a>
         </div>
       ) : (
-        <ConvertibleUsersPanel users={users} />
+        <UsersDirectoryPanel users={users} />
       )}
     </div>
   );

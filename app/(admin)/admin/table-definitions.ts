@@ -272,7 +272,14 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Documentos",
     source: "documents",
     columns: [
-      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      // NOT required: a document can belong to an investor and to no project
+      // (a statement of account, an ID). Demanding a project made that case
+      // impossible to create.
+      { key: "project_id", label: "Proyecto", type: "select", width: 220 },
+      // The other half of the pair. Setting it, with visibility = 'privado', is
+      // what makes a document belong to ONE investor and to nobody else — the
+      // RLS policy reads exactly this column.
+      { key: "investor_id", label: "Inversionista", type: "select", width: 220 },
       { key: "name", label: "Nombre", type: "text", width: 240, required: true },
       {
         key: "doc_type",
@@ -307,6 +314,10 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
         key: "visibility",
         label: "Visibilidad",
         type: "select",
+        // REQUIRED: it is the column the RLS policy reads, and a NULL made the
+        // document invisible to everyone but an admin — silently, with no
+        // error and nothing on screen to explain it.
+        required: true,
         options: ["privado", "proyecto", "público"],
       },
     ],
@@ -363,31 +374,58 @@ export function findAdminTable(id: string | undefined): AdminTableDefinition {
 
 /** Column that links a child record to its project. */
 export const PROJECT_COLUMN_KEY = "project_id";
+export const INVESTOR_COLUMN_KEY = "investor_id";
+
+export type ReferenceOptions = {
+  projects?: { id: string; name: string }[];
+  investors?: { id: string; full_name: string; email: string | null }[];
+};
+
+/** Does this table have a column that needs choices loaded from the database? */
+export function needsReference(
+  definition: AdminTableDefinition,
+  key: string
+): boolean {
+  return definition.columns.some((column) => column.key === key);
+}
 
 /**
- * Fills the project selector with the real projects. Kept out of the static
+ * Fills the reference selectors with real records. Kept out of the static
  * definition because the choices come from the database at request time.
+ *
+ * The investor label carries the email as well as the name: an admin attaching
+ * a PRIVATE document is choosing who will be able to read it, and two people
+ * can share a name. The email is the field the whole linking flow already
+ * treats as the identity (the golden rule in user-management.md).
  */
-export function withProjectOptions(
+export function withReferenceOptions(
   definition: AdminTableDefinition,
-  projects: { id: string; name: string }[]
+  { projects = [], investors = [] }: ReferenceOptions
 ): AdminTableDefinition {
-  if (!definition.columns.some((column) => column.key === PROJECT_COLUMN_KEY)) {
-    return definition;
-  }
-
   return {
     ...definition,
-    columns: definition.columns.map((column) =>
-      column.key === PROJECT_COLUMN_KEY
-        ? {
-            ...column,
-            options: projects.map((project) => ({
-              value: project.id,
-              label: project.name,
-            })),
-          }
-        : column
-    ),
+    columns: definition.columns.map((column) => {
+      if (column.key === PROJECT_COLUMN_KEY) {
+        return {
+          ...column,
+          options: projects.map((project) => ({
+            value: project.id,
+            label: project.name,
+          })),
+        };
+      }
+      if (column.key === INVESTOR_COLUMN_KEY) {
+        return {
+          ...column,
+          options: investors.map((investor) => ({
+            value: investor.id,
+            label: investor.email
+              ? `${investor.full_name} · ${investor.email}`
+              : investor.full_name,
+          })),
+        };
+      }
+      return column;
+    }),
   };
 }

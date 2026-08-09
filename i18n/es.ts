@@ -509,16 +509,39 @@ export const es = {
   },
 
   adminUsers: {
-    title: "Usuarios sin vincular",
+    title: "Usuarios",
     subtitle:
-      "Personas con cuenta y onboarding completo que todavía no tienen ficha de inversionista.",
+      "Todas las personas con cuenta y en qué punto está cada una. Convierte a un visitante en inversionista desde aquí.",
 
     columns: {
       name: "Nombre",
       email: "Correo",
+      state: "Estado",
       registered: "Registrado",
       action: "Acción",
     },
+
+    // The two capabilities are independent, so an account can carry both.
+    state: {
+      admin: "Admin",
+      investor: "Inversionista",
+      visitor: "Visitante",
+    },
+
+    filter: {
+      label: "Estado",
+      all: "Todos los estados",
+      visitor: "Visitantes",
+      investor: "Inversionistas",
+      admin: "Administradores",
+    },
+
+    // Shown in place of the button, so a row without one says why.
+    cannotConvert: {
+      "already-investor": "Ya es inversionista",
+      "is-admin": "No aplica a administradores",
+      "onboarding-pending": "Onboarding pendiente",
+    } as Record<string, string>,
 
     noName: "Sin nombre",
     // Badge on the row: an unlinked record with this email already exists.
@@ -528,7 +551,7 @@ export const es = {
     // {n} is replaced with the number of users listed.
     resultsCount: "{n} usuarios",
     resultsCountOne: "1 usuario",
-    tableCaption: "Usuarios pendientes de vincular como inversionistas",
+    tableCaption: "Personas con cuenta en la plataforma",
 
     convert: "Convertir en inversionista",
     converting: "Convirtiendo…",
@@ -548,10 +571,10 @@ export const es = {
     successConnected: "Conectamos el prospecto existente a esta cuenta.",
     successCreated: "Creamos la ficha de inversionista.",
 
-    empty: "No hay usuarios pendientes por vincular",
-    emptyHint: "Cuando alguien se registre y complete su onboarding, aparecerá aquí.",
-    emptySearch: "Ningún usuario coincide con la búsqueda",
-    emptySearchHint: "Prueba con otro nombre o correo.",
+    empty: "Todavía no hay usuarios registrados",
+    emptyHint: "Cuando alguien cree su cuenta, aparecerá aquí.",
+    emptySearch: "Ningún usuario coincide",
+    emptySearchHint: "Prueba con otro nombre, correo o estado.",
 
     loadError: "No pudimos cargar los usuarios.",
     retry: "Reintentar",
