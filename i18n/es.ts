@@ -593,6 +593,69 @@ export const es = {
     cancel: "Cancelar",
   },
 
+  // The assistant. Its SYSTEM PROMPT is not here on purpose: that is server
+  // behaviour, not UI copy (see lib/ai/system-prompt.ts).
+  chat: {
+    title: "Nuevo chat",
+    open: "Abrir el asistente",
+    close: "Cerrar el asistente",
+    // The scrim behind the panel. A distinct label so a screen reader does not
+    // announce two buttons with the same name.
+    closeFromOutside: "Cerrar el asistente y volver al contenido",
+    newChat: "Empezar un chat nuevo",
+    conversation: "Conversación con el asistente",
+
+    emptyTitle: "¿En qué te ayudo?",
+    emptyHint:
+      "Pregúntame por tus inversiones, tus movimientos o el avance de un proyecto.",
+
+    // Suggestion chips. {project} is replaced with a real project of the
+    // investor when there is one.
+    starters: {
+      total: "¿Cuánto tengo invertido en total?",
+      project: "¿Cómo va {project}?",
+      projectFallback: "¿Cómo van mis proyectos?",
+      movements: "¿Cuáles son mis últimos movimientos?",
+    },
+
+    placeholder: "¿Tienes alguna pregunta?",
+    send: "Enviar mensaje",
+    typing: "Escribiendo…",
+    retry: "Reintentar",
+
+    // Named so a screen reader announces who is speaking.
+    youSaid: "Tú",
+    assistantSaid: "Asistente",
+
+    // Sober by design: the assistant explains data, it does not advise.
+    disclaimer: "El asistente no da asesoría de inversión.",
+
+    // No model is connected (or its key is missing). Answered as a normal turn
+    // so the whole flow works before any provider exists.
+    unavailableReply:
+      "El asistente aún no está disponible. Mientras tanto, el equipo de Investors 180 puede ayudarte con cualquier duda sobre tus inversiones.",
+
+    // The model produced nothing usable — a safety filter tripped, or the reply
+    // came back empty. Answered as a normal turn, not as an error: the user
+    // asked something the assistant will not answer, which is a valid outcome.
+    blockedReply:
+      "No puedo responder eso ahora. Si es sobre tus inversiones, pregúntamelo de otra forma o escríbele al equipo de Investors 180.",
+
+    errors: {
+      generic: "No pudimos responder en este momento. Inténtalo de nuevo.",
+      unauthorized: "Tu sesión expiró. Vuelve a iniciar sesión.",
+      forbidden:
+        "El asistente está disponible para inversionistas vinculados. Escríbele al equipo de Investors 180 si crees que es un error.",
+      invalid: "No pudimos leer tu mensaje. Intenta escribirlo de nuevo.",
+      conversationLimit:
+        "Esta conversación llegó a su límite. Empieza un chat nuevo para seguir preguntando.",
+      rateLimit:
+        "Enviaste muchos mensajes seguidos. Espera un momento e inténtalo de nuevo.",
+      provider:
+        "El asistente no está disponible en este momento. Inténtalo más tarde.",
+    },
+  },
+
   projectDetail: {
     back: "Volver al portafolio",
     photoAlt: "Foto del proyecto",

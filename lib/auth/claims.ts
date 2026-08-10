@@ -69,15 +69,21 @@ export type VerifiedUser = { id: string; email: string | null };
  * Falls back to `getUser()` whenever local verification cannot be completed —
  * a symmetric-key project, a cold key set, a WebCrypto gap. A slow answer is
  * always preferable to logging somebody out over an optimisation.
+ *
+ * `token` is for callers whose session is NOT in a cookie: a native client
+ * sending `Authorization: Bearer <access_token>`. Passing it verifies that
+ * exact JWT instead of whatever the client's storage holds — which, on the
+ * Bearer path, is nothing. Web callers omit it.
  */
 export async function getVerifiedUser(
-  client: SupabaseClient
+  client: SupabaseClient,
+  token?: string
 ): Promise<VerifiedUser | null> {
   try {
     const jwks = await getJwks(client);
 
     if (jwks) {
-      const { data, error } = await client.auth.getClaims(undefined, { jwks });
+      const { data, error } = await client.auth.getClaims(token, { jwks });
       if (!error && data?.claims?.sub) {
         return {
           id: data.claims.sub,
@@ -91,7 +97,7 @@ export async function getVerifiedUser(
 
   const {
     data: { user },
-  } = await client.auth.getUser();
+  } = await client.auth.getUser(token);
 
   return user ? { id: user.id, email: user.email ?? null } : null;
 }
