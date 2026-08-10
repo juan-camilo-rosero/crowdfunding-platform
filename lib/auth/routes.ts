@@ -18,6 +18,8 @@ export const MY_INVESTMENTS_ROUTE = "/mis-inversiones";
 export const TRANSACTIONS_ROUTE = "/transacciones";
 export const DOCUMENTS_ROUTE = "/documentos";
 export const REQUESTS_ROUTE = "/solicitudes";
+/** Investment onboarding: identity + contract. Not the basic onboarding. */
+export const INVESTMENT_ONBOARDING_ROUTE = "/onboarding-inversion";
 export const ADMIN_HOME_ROUTE = "/admin";
 
 export type UserCapabilities = {

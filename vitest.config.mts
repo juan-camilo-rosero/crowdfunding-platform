@@ -32,6 +32,14 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    /**
+     * Vitest defaults to 5s. With the suite past 40 files, the userEvent-driven
+     * component tests started timing out in batches on a loaded machine — every
+     * one of them passing on its own. That is a scheduling artefact, not a
+     * product signal, and a test run that fails at random is worse than a slow
+     * one.
+     */
+    testTimeout: 20_000,
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**"],

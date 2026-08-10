@@ -593,6 +593,78 @@ export const es = {
     cancel: "Cancelar",
   },
 
+  // Investment onboarding: identity verification + contract signature. It is
+  // NOT the basic onboarding (that one is `onboarding` above); this happens
+  // after an admin links the person as an investor. See user-management.md.
+  investmentOnboarding: {
+    title: "Activa tu cuenta de inversionista",
+    subtitle:
+      "Dos pasos para dejar tu cuenta lista. Puedes salir y retomar cuando quieras.",
+
+    // Sober on purpose: this is paperwork, not a milestone to celebrate loudly.
+    completeTitle: "Tu cuenta quedó activa",
+    completeDescription:
+      "Ya completaste la verificación y la firma. Encuentras tu contrato en la sección de documentos.",
+    goToDocuments: "Ver mis documentos",
+    goHome: "Ir a inicio",
+
+    stepLabel: "Paso {n}",
+    status: {
+      pendiente: "Pendiente",
+      hecho: "Listo",
+      omitido: "No aplica",
+      enProgreso: "En progreso",
+    },
+
+    identity: {
+      title: "Verifica tu identidad",
+      description:
+        "Validamos tu documento para confirmar que eres tú. Es un requisito legal antes de firmar.",
+      action: "Verificar mi identidad",
+      working: "Verificando…",
+      approved: "Verificamos tu identidad correctamente.",
+      // The provider said no. Never blames the person.
+      rejected:
+        "No pudimos verificar tu identidad esta vez. Puedes intentarlo de nuevo o escribirle al equipo de Investors 180.",
+      expired: "El proceso de verificación expiró. Vuelve a intentarlo.",
+      retry: "Intentar de nuevo",
+      skipped: "Tu cuenta no requiere verificación de identidad.",
+    },
+
+    contract: {
+      title: "Firma tu contrato",
+      description:
+        "Revisa el contrato de inversión y fírmalo electrónicamente. Queda guardado en tus documentos.",
+      previewTitle: "Contrato de inversión",
+      previewHint:
+        "Este es un documento de ejemplo mientras se conecta el proveedor de firma.",
+      // Never "Invertir": signing enables the account, it commits no money.
+      action: "Firmar",
+      working: "Firmando…",
+      signed: "Tu contrato quedó firmado y guardado.",
+      skipped: "Tu cuenta no requiere firma de contrato.",
+      // Shown when identity is still pending: order matters legally.
+      blocked: "Primero verifica tu identidad para poder firmar.",
+    },
+
+    banner: {
+      title: "Te falta activar tu cuenta de inversionista",
+      description:
+        "Verifica tu identidad y firma tu contrato. Toma un par de minutos.",
+      action: "Continuar",
+    },
+
+    errors: {
+      notInvestor:
+        "Este paso es para inversionistas vinculados. Si crees que es un error, escríbele al equipo de Investors 180.",
+      disabled: "Este paso no está habilitado en este momento.",
+      identityFailed:
+        "No pudimos completar la verificación. Inténtalo de nuevo en un momento.",
+      contractFailed:
+        "No pudimos completar la firma. Inténtalo de nuevo en un momento.",
+    },
+  },
+
   // The assistant. Its SYSTEM PROMPT is not here on purpose: that is server
   // behaviour, not UI copy (see lib/ai/system-prompt.ts).
   chat: {

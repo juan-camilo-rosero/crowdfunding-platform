@@ -21,6 +21,11 @@ import {
   getInvestorIds,
 } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import {
+  fetchInvestmentOnboardingState,
+  type OnboardingClient,
+} from "@/lib/onboarding/investment";
+import { InvestmentOnboardingBanner } from "@/components/onboarding/InvestmentOnboardingBanner";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { KpiCard } from "@/components/cards/KpiCard";
@@ -70,6 +75,15 @@ export default async function HomePage() {
   // One cached read per request, shared with the layout's sidebar check.
   const investorIds = await getInvestorIds();
   const hasInvestorLink = investorIds.length > 0;
+
+  // Where this investor stands in the investment onboarding. Derived on the
+  // server from their own row and their own documents; the banner only renders
+  // what it is handed.
+  const onboardingState = await fetchInvestmentOnboardingState(
+    supabase as unknown as OnboardingClient,
+    profile.id,
+    investorIds
+  );
 
   const [summaryResult, distributionResult, contributionsResult] =
     await Promise.all([
@@ -223,6 +237,9 @@ export default async function HomePage() {
     // gap-8 separates the title from the content.
     <div className="flex flex-col gap-8">
       <PageTitle>{es.home.title}</PageTitle>
+
+      {/* Non-blocking: it invites, it does not gate. Disappears when done. */}
+      <InvestmentOnboardingBanner state={onboardingState} />
 
       {/*
         12-column grid: 12 divides evenly by 4, 3 and 2, so any block can take
