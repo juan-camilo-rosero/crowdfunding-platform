@@ -117,6 +117,10 @@ export async function signContract(): Promise<OnboardingActionResult> {
   const result = await requestContractSignature({
     userId: caller.userId,
     investorId: caller.investorId,
+    // The self-service path signs no project-specific contract; the admin flow
+    // (which uploads the prepared PDF) is the one that carries those.
+    projectId: null,
+    capitalContributionId: null,
     documentName: es.investmentOnboarding.contract.previewTitle,
     signerEmail: profile?.email ?? null,
     signerName: profile?.full_name ?? null,

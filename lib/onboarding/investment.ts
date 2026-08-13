@@ -1,4 +1,5 @@
 import { CONTRACT_DOC_TYPE } from "@/lib/esign/contract";
+import type { SigningStatus } from "@/lib/esign/webhook-events";
 import {
   getInvestmentOnboardingConfig,
   type InvestmentOnboardingConfig,
@@ -17,23 +18,77 @@ import {
  * "step 2 of 2" flag is one failed write away from claiming somebody signed a
  * contract that is not there.
  *
- * WHEN THE REAL PROVIDERS ARRIVE this will want revisiting for the contract
- * half: a Documenso envelope has states this cannot see — sent, viewed,
- * declined, expired — and "no document yet" cannot tell them apart. The natural
- * shape is a signature-tracking table mirroring identity_verifications
- * (envelope id, status, decline reason, completed_at), and the derivation would
- * then read it instead of inferring from absence. Not built now because a mock
- * that resolves immediately has no intermediate state to track, and a table
- * with one always-terminal row would be scaffolding pretending to be a feature.
+ * The contract half now also reads `signing_requests` (added when Documenso was
+ * connected), because "no document yet" cannot tell apart never-sent, waiting
+ * for the signer, rejected and expired — states a real provider genuinely has.
+ * The filed document still wins: it is the fact, and the tracking row is the
+ * narrative of how it got there.
  */
 
 export type StepState = "pendiente" | "hecho" | "omitido";
+
+/**
+ * Where the contract stands, in the detail a real provider makes possible.
+ *
+ * `procesando` is the honest answer to the moment right after somebody signs:
+ * the provider has their signature, our webhook has not landed yet, and saying
+ * either "pending" or "done" would be wrong.
+ */
+export type ContractStage =
+  | "sin-enviar"
+  | "en-firma"
+  | "procesando"
+  | "firmado"
+  | "rechazado"
+  | "anulado"
+  | "expirado"
+  | "omitido";
+
+export type SigningSnapshot = {
+  status: SigningStatus;
+  /** Where the investor resumes signing. Absent unless the provider gave one. */
+  signingUrl: string | null;
+  declinedReason: string | null;
+  hasSignedDocument: boolean;
+};
+
+/** Turns the tracking row plus the filed document into one stage. */
+export function contractStage(
+  hasSignedContract: boolean,
+  signing: SigningSnapshot | null,
+  stepEnabled: boolean,
+  selfServiceSigning: boolean
+): ContractStage {
+  if (!stepEnabled) return "omitido";
+  // The filed document is the fact; everything else describes the journey.
+  if (hasSignedContract) return "firmado";
+  // Nothing sent yet. In mock mode the investor signs inline, so there is
+  // nothing to wait for; with a real provider they wait for the team.
+  if (!signing) return selfServiceSigning ? "en-firma" : "sin-enviar";
+
+  switch (signing.status) {
+    case "completado":
+      // Signed for real, but the PDF is not filed yet.
+      return "procesando";
+    case "rechazado":
+      return "rechazado";
+    case "anulado":
+      return "anulado";
+    case "expirado":
+      return "expirado";
+    default:
+      return "en-firma";
+  }
+}
 
 export type InvestmentOnboardingState = {
   /** False when the flow is switched off, or the person is not an investor. */
   applies: boolean;
   identity: StepState;
   contract: StepState;
+  /** The detail behind `contract`, once a real provider is connected. */
+  contractStage: ContractStage;
+  signing: SigningSnapshot | null;
   /** Every step that applies is done. */
   isComplete: boolean;
   config: InvestmentOnboardingConfig;
@@ -44,11 +99,14 @@ export const NOT_APPLICABLE: InvestmentOnboardingState = {
   applies: false,
   identity: "omitido",
   contract: "omitido",
+  contractStage: "omitido",
+  signing: null,
   isComplete: true,
   config: {
     enabled: false,
     identityStepEnabled: false,
     contractStepEnabled: false,
+    selfServiceSigning: false,
   },
 };
 
@@ -59,6 +117,8 @@ export type InvestmentOnboardingFacts = {
   identityVerified: boolean;
   /** A `contrato` document exists for this investor. */
   hasSignedContract: boolean;
+  /** The latest signing request, when one has been sent. */
+  signing?: SigningSnapshot | null;
 };
 
 /**
@@ -90,10 +150,19 @@ export function deriveInvestmentOnboardingState(
       ? "hecho"
       : "pendiente";
 
+  const signing = facts.signing ?? null;
+
   return {
     applies: true,
     identity,
     contract,
+    contractStage: contractStage(
+      facts.hasSignedContract,
+      signing,
+      config.contractStepEnabled,
+      config.selfServiceSigning
+    ),
+    signing,
     isComplete: identity !== "pendiente" && contract !== "pendiente",
     config,
   };
@@ -127,7 +196,7 @@ export async function fetchInvestmentOnboardingState(
     return { ...NOT_APPLICABLE, config };
   }
 
-  const [profile, contract] = await Promise.all([
+  const [profile, contract, signing] = await Promise.all([
     client.from("users").select("identity_verified").eq("id", userId).limit(1),
     client
       .from("documents")
@@ -135,7 +204,22 @@ export async function fetchInvestmentOnboardingState(
       .eq("doc_type", CONTRACT_DOC_TYPE)
       .in("investor_id", investorIds)
       .limit(1),
+    // The investor may READ their own signing requests (select-own policy);
+    // only writing them is privileged.
+    client
+      .from("signing_requests")
+      .select("status, declined_reason, signed_document_id")
+      .in("investor_id", investorIds)
+      .limit(1),
   ]);
+
+  const signingRow = (
+    (signing.data ?? []) as {
+      status: string;
+      declined_reason: string | null;
+      signed_document_id: string | null;
+    }[]
+  )[0];
 
   const identityVerified = !!(
     (profile.data ?? []) as { identity_verified: boolean | null }[]
@@ -146,6 +230,14 @@ export async function fetchInvestmentOnboardingState(
       isInvestor: true,
       identityVerified,
       hasSignedContract: ((contract.data ?? []) as unknown[]).length > 0,
+      signing: signingRow
+        ? {
+            status: signingRow.status as SigningStatus,
+            signingUrl: null,
+            declinedReason: signingRow.declined_reason,
+            hasSignedDocument: !!signingRow.signed_document_id,
+          }
+        : null,
     },
     config
   );

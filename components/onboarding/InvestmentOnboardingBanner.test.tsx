@@ -10,8 +10,10 @@ const state = (
   applies: true,
   identity: "pendiente",
   contract: "pendiente",
+  contractStage: "sin-enviar",
+  signing: null,
   isComplete: false,
-  config: { enabled: true, identityStepEnabled: true, contractStepEnabled: true },
+  config: { enabled: true, identityStepEnabled: true, contractStepEnabled: true, selfServiceSigning: true },
   ...over,
 });
 
@@ -70,6 +72,7 @@ describe("when it disappears", () => {
             enabled: false,
             identityStepEnabled: false,
             contractStepEnabled: false,
+            selfServiceSigning: true,
           },
         })}
       />

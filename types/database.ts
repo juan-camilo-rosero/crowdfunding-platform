@@ -732,6 +732,108 @@ export type Database = {
           },
         ]
       }
+      signing_requests: {
+        Row: {
+          capital_contribution_id: string | null
+          completed_at: string | null
+          created_at: string
+          declined_reason: string | null
+          external_document_id: string
+          id: string
+          investor_id: string
+          project_id: string | null
+          sent_at: string
+          signed_document_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          capital_contribution_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          declined_reason?: string | null
+          external_document_id: string
+          id?: string
+          investor_id: string
+          project_id?: string | null
+          sent_at?: string
+          signed_document_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          capital_contribution_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          declined_reason?: string | null
+          external_document_id?: string
+          id?: string
+          investor_id?: string
+          project_id?: string | null
+          sent_at?: string
+          signed_document_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signing_requests_capital_contribution_id_fkey"
+            columns: ["capital_contribution_id"]
+            isOneToOne: false
+            referencedRelation: "capital_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signing_requests_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investor_financial_summary"
+            referencedColumns: ["investor_id"]
+          },
+          {
+            foreignKeyName: "signing_requests_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investor_totals"
+            referencedColumns: ["investor_id"]
+          },
+          {
+            foreignKeyName: "signing_requests_investor_id_fkey"
+            columns: ["investor_id"]
+            isOneToOne: false
+            referencedRelation: "investors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signing_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_fundraising"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "signing_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_totals"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "signing_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signing_requests_signed_document_id_fkey"
+            columns: ["signed_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           actual_date: string | null
@@ -998,6 +1100,7 @@ export type Database = {
         Args: { p_inserts?: Json; p_table: string; p_updates?: Json }
         Returns: Json
       }
+      has_project_stake: { Args: { p_project_id: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
     }
     Enums: {

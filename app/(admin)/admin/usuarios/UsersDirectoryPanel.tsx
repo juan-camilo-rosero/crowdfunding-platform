@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ActivityIcon, SearchIcon, UserPlusIcon, UsersIcon } from "lucide-react";
+import { ActivityIcon, FileSignatureIcon, SearchIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { formatDate } from "@/lib/format";
 import {
@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { FilterDropdown } from "@/components/filters/FilterDropdown";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
 import { convertVisitorToInvestor } from "./actions";
+import { sendContractForSignature } from "./contract-actions";
 
 export type UsersDirectoryPanelProps = {
   users: UserDirectoryEntry[];
@@ -61,6 +62,38 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  /** The investor whose contract is being sent, and the chosen PDF. */
+  const [contractTarget, setContractTarget] = useState<UserDirectoryEntry | null>(null);
+  const [contractFile, setContractFile] = useState<File | null>(null);
+  const [isSendingContract, setIsSendingContract] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
+
+  async function handleSendContract() {
+    if (!contractTarget || !contractFile) return;
+
+    setIsSendingContract(true);
+    setContractError(null);
+
+    // FormData, not JSON: the PDF goes straight through to the provider and is
+    // never parked in storage.
+    const payload = new FormData();
+    payload.set("userId", contractTarget.id);
+    payload.set("contract", contractFile);
+
+    const result = await sendContractForSignature(payload);
+    setIsSendingContract(false);
+
+    if (!result.ok) {
+      setContractError(result.error);
+      return;
+    }
+
+    setNotice(es.adminContract.sent);
+    setContractTarget(null);
+    setContractFile(null);
+    router.refresh();
+  }
 
   const visible = useMemo(
     () => searchUsers(users, query).filter((user) => matchesFilter(user, filter)),
@@ -185,6 +218,28 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
 
           if (column.key === "action") {
             const reason = notConvertibleReason(user);
+
+            // Already an investor: the useful action here is not converting
+            // them again but sending the contract they have to sign.
+            if (user.isInvestor) {
+              return (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setContractError(null);
+                    setNotice(null);
+                    setContractFile(null);
+                    setContractTarget(user);
+                  }}
+                >
+                  <FileSignatureIcon data-icon="inline-start" aria-hidden="true" />
+                  {es.adminContract.send}
+                </Button>
+              );
+            }
+
             // A reason instead of a dead button: the row says why, and the
             // condition is the same one the Server Action enforces.
             if (reason) {
@@ -256,6 +311,43 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
                 ? es.adminUsers.confirmWithProspect
                 : es.adminUsers.confirmWithoutProspect}
             </p>
+          </div>
+        ) : null}
+      </FormDialog>
+
+      <FormDialog
+        open={contractTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setContractTarget(null);
+        }}
+        title={es.adminContract.dialogTitle}
+        description={es.adminContract.dialogDescription}
+        onSubmit={handleSendContract}
+        submitLabel={es.adminContract.send}
+        submittingLabel={es.adminContract.sending}
+        isSubmitting={isSendingContract}
+        submitDisabled={!contractFile}
+        error={contractError}
+      >
+        {contractTarget ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-ink-900">
+              {es.adminUsers.confirmPerson
+                .replace("{name}", contractTarget.fullName ?? es.adminUsers.noName)
+                .replace("{email}", contractTarget.email)}
+            </p>
+
+            <label className="flex flex-col gap-1.5 text-sm text-ink-700">
+              {es.adminContract.fileLabel}
+              <Input
+                type="file"
+                accept="application/pdf"
+                aria-label={es.adminContract.fileLabel}
+                onChange={(event) =>
+                  setContractFile(event.target.files?.[0] ?? null)
+                }
+              />
+            </label>
           </div>
         ) : null}
       </FormDialog>

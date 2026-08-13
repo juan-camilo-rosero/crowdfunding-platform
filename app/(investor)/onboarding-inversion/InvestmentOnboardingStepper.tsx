@@ -2,10 +2,15 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { CheckIcon, FileTextIcon, ShieldCheckIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckIcon, FileTextIcon, RefreshCwIcon, ShieldCheckIcon } from "lucide-react";
 import { es } from "@/i18n";
 import { DOCUMENTS_ROUTE, INVESTOR_HOME_ROUTE } from "@/lib/auth/routes";
-import type { InvestmentOnboardingState, StepState } from "@/lib/onboarding/investment";
+import type {
+  ContractStage,
+  InvestmentOnboardingState,
+  StepState,
+} from "@/lib/onboarding/investment";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { signContract, verifyIdentity } from "./actions";
@@ -37,6 +42,7 @@ const STATUS_VARIANT: Record<StepState, "success" | "warning" | "neutral"> = {
 export function InvestmentOnboardingStepper({
   state,
 }: InvestmentOnboardingStepperProps) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [running, setRunning] = useState<StepKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -167,39 +173,126 @@ export function InvestmentOnboardingStepper({
           status={state.contract}
         >
           {state.contract === "pendiente" ? (
-            <div className="flex flex-col gap-3">
-              {/* Placeholder preview until a signing provider is connected. */}
-              <div className="rounded-[10px] border border-line bg-surface px-4 py-3">
-                <p className="text-sm font-medium text-ink-900">
-                  {es.investmentOnboarding.contract.previewTitle}
-                </p>
-                <p className="mt-1 text-sm text-ink-500">
-                  {es.investmentOnboarding.contract.previewHint}
-                </p>
-              </div>
-
-              {contractBlocked ? (
-                <p className="text-sm text-ink-500">
-                  {es.investmentOnboarding.contract.blocked}
-                </p>
-              ) : (
-                <Button
-                  type="button"
-                  variant="brand"
-                  size="lg"
-                  className="self-start"
-                  loading={isBusy("contract")}
-                  loadingText={es.investmentOnboarding.contract.working}
-                  disabled={pending}
-                  onClick={() => run("contract")}
-                >
-                  {es.investmentOnboarding.contract.action}
-                </Button>
-              )}
-            </div>
+            contractBlocked ? (
+              <p className="text-sm text-ink-500">
+                {es.investmentOnboarding.contract.blocked}
+              </p>
+            ) : (
+              <ContractStep
+                stage={state.contractStage}
+                signingUrl={state.signing?.signingUrl ?? null}
+                isBusy={isBusy("contract")}
+                disabled={pending}
+                onSign={() => run("contract")}
+                onRefresh={() => router.refresh()}
+              />
+            )
           ) : null}
         </StepCard>
       </ol>
+    </div>
+  );
+}
+
+/**
+ * The contract step, in whichever stage it is.
+ *
+ * With a real provider the honest answer is rarely "pending" or "done": the
+ * envelope may not have been sent, may be waiting for the signer, or may have
+ * been signed seconds ago with our webhook still in flight. Each of those gets
+ * its own copy rather than being flattened into one.
+ */
+function ContractStep({
+  stage,
+  signingUrl,
+  isBusy,
+  disabled,
+  onSign,
+  onRefresh,
+}: {
+  stage: ContractStage;
+  signingUrl: string | null;
+  isBusy: boolean;
+  disabled: boolean;
+  onSign: () => void;
+  onRefresh: () => void;
+}) {
+  // Waiting on the team. Nothing for the investor to do, and saying so beats a
+  // button that would fail.
+  if (stage === "sin-enviar") {
+    return (
+      <p className="text-sm text-ink-500">
+        {es.investmentOnboarding.contract.awaitingSend}
+      </p>
+    );
+  }
+
+  if (stage === "procesando") {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-sm text-ink-700">
+          {es.investmentOnboarding.contract.processing}
+        </p>
+        {/* The webhook is authoritative and may land a moment later; this only
+            re-reads the server, it never asserts a state. */}
+        <Button type="button" variant="outline" size="sm" onClick={onRefresh}>
+          <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />
+          {es.investmentOnboarding.contract.refresh}
+        </Button>
+      </div>
+    );
+  }
+
+  if (stage === "rechazado" || stage === "anulado" || stage === "expirado") {
+    const message =
+      stage === "rechazado"
+        ? es.investmentOnboarding.contract.declined
+        : stage === "anulado"
+          ? es.investmentOnboarding.contract.cancelled
+          : es.investmentOnboarding.contract.expired;
+
+    // Resending is the admin's act, so there is no retry button here.
+    return <p className="text-sm text-ink-700">{message}</p>;
+  }
+
+  // "en-firma": the envelope is out. With a signing URL the investor goes to
+  // the provider; without one (mock mode) the inline action still works.
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="rounded-[10px] border border-line bg-surface px-4 py-3">
+        <p className="text-sm font-medium text-ink-900">
+          {es.investmentOnboarding.contract.previewTitle}
+        </p>
+        <p className="mt-1 text-sm text-ink-500">
+          {signingUrl
+            ? es.investmentOnboarding.contract.readyToSign
+            : es.investmentOnboarding.contract.previewHint}
+        </p>
+      </div>
+
+      {signingUrl ? (
+        <a
+          href={signingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonVariants({ variant: "brand", size: "lg", className: "self-start" })}
+        >
+          {es.investmentOnboarding.contract.openSigning}
+        </a>
+      ) : (
+        <Button
+          type="button"
+          variant="brand"
+          size="lg"
+          className="self-start"
+          loading={isBusy}
+          loadingText={es.investmentOnboarding.contract.working}
+          disabled={disabled}
+          onClick={onSign}
+        >
+          {es.investmentOnboarding.contract.action}
+        </Button>
+      )}
     </div>
   );
 }

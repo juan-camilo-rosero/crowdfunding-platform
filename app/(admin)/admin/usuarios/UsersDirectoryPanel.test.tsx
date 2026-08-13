@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { es } from "@/i18n";
 import type { UserDirectoryEntry } from "@/lib/users/convertible";
 
 const convertVisitorToInvestor = vi.fn();
+const sendContractForSignature = vi.fn();
 const refresh = vi.fn();
 
 vi.mock("./actions", () => ({
   convertVisitorToInvestor: (input: unknown) => convertVisitorToInvestor(input),
+}));
+vi.mock("./contract-actions", () => ({
+  sendContractForSignature: (input: unknown) => sendContractForSignature(input),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
@@ -111,6 +115,7 @@ async function chooseFilter(
 beforeEach(() => {
   vi.clearAllMocks();
   convertVisitorToInvestor.mockResolvedValue({ ok: true, outcome: "created" });
+  sendContractForSignature.mockResolvedValue({ ok: true, signingUrl: "https://esign/x" });
 });
 
 describe("the directory", () => {
@@ -218,19 +223,84 @@ describe("the action column", () => {
     // Each reason mirrors a condition the Server Action enforces, so the UI
     // never offers something the server will refuse.
     expect(
-      within(rowFor("Dana Sol")).getByText(es.adminUsers.cannotConvert["already-investor"])
-    ).toBeInTheDocument();
-    expect(
       within(rowFor("Feli Ríos")).getByText(es.adminUsers.cannotConvert["is-admin"])
-    ).toBeInTheDocument();
-    // The owner is blocked by both conditions at once; the reason shown is the
-    // informative one, not the one that merely excuses the missing button.
-    expect(
-      within(rowFor("Caro Gil")).getByText(es.adminUsers.cannotConvert["already-investor"])
     ).toBeInTheDocument();
     expect(
       within(rowFor("Eva Mora")).getByText(es.adminUsers.cannotConvert["onboarding-pending"])
     ).toBeInTheDocument();
+  });
+
+  it("offers the CONTRACT to someone who is already an investor", () => {
+    renderPanel();
+
+    // Converting them again is meaningless; sending the contract they have to
+    // sign is the action an admin actually comes here for.
+    for (const name of ["Dana Sol", "Caro Gil"]) {
+      expect(
+        within(rowFor(name)).getByRole("button", { name: new RegExp(es.adminContract.send) })
+      ).toBeInTheDocument();
+    }
+  });
+
+  it("does not offer the contract to a non-investor", () => {
+    renderPanel();
+
+    for (const name of ["Beto Ruiz", "Feli Ríos", "Eva Mora"]) {
+      expect(
+        within(rowFor(name)).queryByRole("button", {
+          name: new RegExp(es.adminContract.send),
+        })
+      ).not.toBeInTheDocument();
+    }
+  });
+});
+
+describe("sending the contract", () => {
+  it("asks for a PDF and posts the user id from the row", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(
+      within(rowFor("Dana Sol")).getByRole("button", {
+        name: new RegExp(es.adminContract.send),
+      })
+    );
+
+    const dialog = screen.getByRole("dialog");
+    const field = within(dialog).getByLabelText(es.adminContract.fileLabel);
+    expect(field).toHaveAttribute("accept", "application/pdf");
+
+    await user.upload(
+      field,
+      new File(["%PDF-1.4"], "contrato.pdf", { type: "application/pdf" })
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: es.adminContract.send })
+    );
+
+    await waitFor(() => expect(sendContractForSignature).toHaveBeenCalled());
+    const payload = sendContractForSignature.mock.calls[0][0] as FormData;
+    // The investor is resolved on the server from this id; the panel never
+    // names an investor row directly.
+    expect(payload.get("userId")).toBe("u3");
+    expect((payload.get("contract") as File).name).toBe("contrato.pdf");
+  });
+
+  it("will not submit without a file", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    await user.click(
+      within(rowFor("Dana Sol")).getByRole("button", {
+        name: new RegExp(es.adminContract.send),
+      })
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: es.adminContract.send,
+      })
+    ).toBeDisabled();
   });
 });
 

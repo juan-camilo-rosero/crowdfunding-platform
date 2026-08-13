@@ -11,6 +11,7 @@ const ALL_ON: InvestmentOnboardingConfig = {
   enabled: true,
   identityStepEnabled: true,
   contractStepEnabled: true,
+  selfServiceSigning: true,
 };
 
 const facts = (over: Partial<InvestmentOnboardingFacts> = {}): InvestmentOnboardingFacts => ({
@@ -98,7 +99,12 @@ describe("the skip flags", () => {
   it("is complete out of the box when both steps are skipped", () => {
     const state = derive(
       {},
-      { enabled: false, identityStepEnabled: false, contractStepEnabled: false }
+      {
+        enabled: false,
+        identityStepEnabled: false,
+        contractStepEnabled: false,
+        selfServiceSigning: true,
+      }
     );
 
     expect(state.applies).toBe(false);

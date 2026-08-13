@@ -8,6 +8,9 @@ import { InvestmentOnboardingStepper } from "./InvestmentOnboardingStepper";
 const verifyIdentity = vi.fn();
 const signContract = vi.fn();
 
+const refresh = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+
 vi.mock("./actions", () => ({
   verifyIdentity: () => verifyIdentity(),
   signContract: () => signContract(),
@@ -19,8 +22,12 @@ const state = (
   applies: true,
   identity: "pendiente",
   contract: "pendiente",
+  // What contractStage() yields in mock mode with nothing sent: the investor
+  // signs inline. The real-provider stages get their own tests below.
+  contractStage: "en-firma",
+  signing: null,
   isComplete: false,
-  config: { enabled: true, identityStepEnabled: true, contractStepEnabled: true },
+  config: { enabled: true, identityStepEnabled: true, contractStepEnabled: true, selfServiceSigning: true },
   ...over,
 });
 
@@ -28,7 +35,7 @@ const state = (
 const identitySkipped = () =>
   state({
     identity: "omitido",
-    config: { enabled: true, identityStepEnabled: false, contractStepEnabled: true },
+    config: { enabled: true, identityStepEnabled: false, contractStepEnabled: true, selfServiceSigning: true },
   });
 
 const stepFor = (title: string) => screen.getByText(title).closest("li")!;
@@ -193,6 +200,102 @@ describe("running a step", () => {
     const label = es.investmentOnboarding.contract.action;
     expect(label).toBe("Firmar");
     expect(label).not.toMatch(/invertir|ganar|rentabilidad/i);
+  });
+});
+
+describe("the contract stages a real provider adds", () => {
+  it("says the team will send it when nothing has gone out", () => {
+    render(
+      <InvestmentOnboardingStepper
+        state={state({ identity: "hecho", contractStage: "sin-enviar" })}
+      />
+    );
+
+    expect(
+      screen.getByText(es.investmentOnboarding.contract.awaitingSend)
+    ).toBeInTheDocument();
+    // Nothing for the investor to press: pressing it would fail.
+    expect(
+      screen.queryByRole("button", { name: es.investmentOnboarding.contract.action })
+    ).not.toBeInTheDocument();
+  });
+
+  it("sends the investor to the provider when there is a signing URL", () => {
+    render(
+      <InvestmentOnboardingStepper
+        state={state({
+          identity: "hecho",
+          contractStage: "en-firma",
+          signing: {
+            status: "enviado",
+            signingUrl: "https://app.documenso.com/sign/abc",
+            declinedReason: null,
+            hasSignedDocument: false,
+          },
+        })}
+      />
+    );
+
+    expect(
+      screen.getByRole("link", { name: es.investmentOnboarding.contract.openSigning })
+    ).toHaveAttribute("href", "https://app.documenso.com/sign/abc");
+  });
+
+  it("shows 'processing' between signing and the webhook landing", async () => {
+    const user = userEvent.setup();
+    render(
+      <InvestmentOnboardingStepper
+        state={state({ identity: "hecho", contractStage: "procesando" })}
+      />
+    );
+
+    expect(
+      screen.getByText(es.investmentOnboarding.contract.processing)
+    ).toBeInTheDocument();
+
+    // Refresh re-reads the server; it never asserts a state.
+    await user.click(
+      screen.getByRole("button", { name: new RegExp(es.investmentOnboarding.contract.refresh) })
+    );
+    expect(refresh).toHaveBeenCalled();
+    expect(signContract).not.toHaveBeenCalled();
+  });
+
+  it("explains a rejection and offers no self-service retry", () => {
+    render(
+      <InvestmentOnboardingStepper
+        state={state({ identity: "hecho", contractStage: "rechazado" })}
+      />
+    );
+
+    expect(
+      screen.getByText(es.investmentOnboarding.contract.declined)
+    ).toBeInTheDocument();
+    // Resending is the admin's act.
+    expect(
+      screen.queryByRole("button", { name: es.investmentOnboarding.contract.action })
+    ).not.toBeInTheDocument();
+  });
+
+  it("explains an expiry and a cancellation the same way", () => {
+    const { unmount } = render(
+      <InvestmentOnboardingStepper
+        state={state({ identity: "hecho", contractStage: "expirado" })}
+      />
+    );
+    expect(
+      screen.getByText(es.investmentOnboarding.contract.expired)
+    ).toBeInTheDocument();
+    unmount();
+
+    render(
+      <InvestmentOnboardingStepper
+        state={state({ identity: "hecho", contractStage: "anulado" })}
+      />
+    );
+    expect(
+      screen.getByText(es.investmentOnboarding.contract.cancelled)
+    ).toBeInTheDocument();
   });
 });
 

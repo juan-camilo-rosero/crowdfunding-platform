@@ -52,6 +52,8 @@ const { recordSignedContract, requestContractSignature, CONTRACT_DOC_TYPE } =
 const SUBJECT: SigningSubject = {
   userId: "user-1",
   investorId: "inv-1",
+  projectId: null,
+  capitalContributionId: null,
   documentName: "Contrato de inversión",
   signerEmail: "ana@ejemplo.com",
   signerName: "Ana Pérez",

@@ -593,6 +593,30 @@ export const es = {
     cancel: "Cancelar",
   },
 
+  // Admin action: send the prepared contract to an investor for signature.
+  adminContract: {
+    send: "Enviar contrato a firma",
+    sending: "Enviando…",
+    dialogTitle: "Enviar contrato a firma",
+    dialogDescription:
+      "Sube el contrato preparado para esta persona. Se lo enviamos para que lo firme electrónicamente.",
+    fileLabel: "Contrato en PDF",
+    sent: "Enviamos el contrato. La persona lo verá en su paso de firma.",
+    // Shown in the row when a signature is already in flight.
+    inProgress: "Contrato en firma",
+    signed: "Contrato firmado",
+
+    errors: {
+      missingFile: "Selecciona el contrato en PDF.",
+      notPdf: "El contrato debe ser un archivo PDF.",
+      tooLarge: "El archivo supera el tamaño permitido (10 MB).",
+      notInvestor: "Esa persona todavía no está vinculada como inversionista.",
+      noEmail: "Esa persona no tiene un correo registrado para firmar.",
+      sendFailed:
+        "No pudimos enviar el contrato a firma. Inténtalo de nuevo en un momento.",
+    },
+  },
+
   // Investment onboarding: identity verification + contract signature. It is
   // NOT the basic onboarding (that one is `onboarding` above); this happens
   // after an admin links the person as an investor. See user-management.md.
@@ -645,6 +669,21 @@ export const es = {
       skipped: "Tu cuenta no requiere firma de contrato.",
       // Shown when identity is still pending: order matters legally.
       blocked: "Primero verifica tu identidad para poder firmar.",
+
+      // States that only exist with a real signature provider.
+      awaitingSend:
+        "El equipo de Investors 180 te enviará el contrato en breve. Te avisamos por correo.",
+      readyToSign: "Tu contrato está listo para firmar.",
+      openSigning: "Abrir el contrato",
+      processing:
+        "Estamos registrando tu firma. Puede tardar un momento; esta pantalla se actualiza sola.",
+      refresh: "Actualizar",
+      declined:
+        "Rechazaste el contrato. Si fue un error, escríbele al equipo de Investors 180 para que te lo reenvíe.",
+      expired:
+        "El enlace de firma expiró. El equipo de Investors 180 puede reenviártelo.",
+      cancelled:
+        "El equipo canceló este envío. Te reenviarán el contrato cuando esté listo.",
     },
 
     banner: {

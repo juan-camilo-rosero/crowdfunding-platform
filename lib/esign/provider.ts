@@ -13,9 +13,14 @@ import type { EsignProvider } from "./types";
  * so ESIGN_API_KEY can never reach a browser bundle.
  *
  * Environment:
- *   ESIGN_PROVIDER      "mock" (default) | "documenso"
- *   ESIGN_PROVIDER_URL  base URL of the Documenso deployment
- *   ESIGN_API_KEY       server-only, never NEXT_PUBLIC_
+ *   ESIGN_PROVIDER         "mock" (default) | "documenso"
+ *   ESIGN_PROVIDER_URL     API base, e.g. https://app.documenso.com/api/v2 for
+ *                          Cloud or https://your-host/api/v2 self-hosted. Same
+ *                          code path either way; only the host differs.
+ *   ESIGN_API_KEY          server-only, never NEXT_PUBLIC_. Sent as a BARE
+ *                          token in Authorization, without "Bearer".
+ *   ESIGN_WEBHOOK_SECRET   compared against the X-Documenso-Secret header
+ *   ESIGN_DOWNLOAD_PATH_TEMPLATE  optional override of the download path
  */
 
 let cached: EsignProvider | null = null;
@@ -43,7 +48,7 @@ function resolveProvider(): EsignProvider {
       return createMockEsignProvider();
     }
 
-    return createDocumensoEsignProvider();
+    return createDocumensoEsignProvider(url, apiKey);
   }
 
   return createMockEsignProvider();
