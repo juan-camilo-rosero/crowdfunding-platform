@@ -120,6 +120,9 @@ export default async function DocumentsPage({
             caption={es.documents.tableCaption}
             columns={COLUMNS}
             rows={rows}
+            // What the row IS: the kind of document. The project and the date
+            // qualify it.
+            emphasizeColumn="docType"
             renderCell={(row, column) => {
               if (column.key === "docType") {
                 const type = row.docType ? String(row.docType) : null;

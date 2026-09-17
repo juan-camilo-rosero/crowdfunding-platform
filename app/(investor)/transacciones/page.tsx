@@ -133,6 +133,9 @@ export default async function TransactionsPage({
             caption={es.transactions.tableCaption}
             columns={COLUMNS}
             rows={rows}
+            // The project is what a movement is ABOUT; the date and the amount
+            // are read around it.
+            emphasizeColumn="projectName"
             renderCell={(row, column) => {
               if (column.key === "date") {
                 return row.date ? formatDate(String(row.date)) : "";

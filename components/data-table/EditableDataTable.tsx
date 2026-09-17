@@ -149,7 +149,7 @@ export function EditableDataTable({
     // the table has more columns to the right, so it is always there rather
     // than appearing once the user has already guessed. `scrollbar-table`
     // makes it a solid, grabbable bar instead of a hairline.
-    <div className="max-h-[70vh] w-full overflow-x-scroll overflow-y-auto rounded-[5px] border border-line selection:bg-brand selection:text-elevated scrollbar-table">
+    <div className="max-h-[70vh] w-full overflow-x-scroll overflow-y-auto rounded-[10px] border border-line shadow-[0_1px_2px_rgba(30,30,30,0.04)] selection:bg-brand selection:text-elevated scrollbar-table">
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
         {/* Sticky header: the labels stay visible down a long table. z-30 so it
@@ -232,6 +232,9 @@ export function EditableDataTable({
                   <EditableCell
                     column={column}
                     value={valueFor(rowIndex, column)}
+                    // The frozen first column is the record's name; it carries
+                    // the row the way the header carries the table.
+                    emphasized={columnIndex === 0}
                     onCommit={(value) => handleCommit(rowIndex, column, value)}
                   />
                 </div>

@@ -1086,6 +1086,9 @@ export const es = {
     emptyFiltered: "Ningún registro coincide con los filtros.",
     // Leído por lectores de pantalla cuando una celda no tiene valor.
     emptyValue: "vacío",
+    // Botón que aparece al pasar el cursor sobre una celda editable.
+    // {campo} se reemplaza con el nombre de la columna.
+    editCell: "Editar {campo}",
 
     // Autoguardado: cada celda se guarda sola, sin botón de por medio.
     autosaveHint: "Los cambios se guardan automáticamente.",

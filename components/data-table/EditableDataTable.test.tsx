@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { es } from "@/i18n";
 import type { TableColumn, TableRow } from "@/lib/table/types";
 import { EditableDataTable } from "./EditableDataTable";
 
@@ -74,15 +75,42 @@ describe("committing a cell", () => {
     expect(screen.getByText("Villa Rotonda")).toBeInTheDocument();
   });
 
-  it("opens with Enter on the focused cell, not only with a double click", async () => {
+  it("opens from the pencil with a single click, not only with a double click", async () => {
     const user = userEvent.setup();
     renderGrid();
 
-    const cell = screen.getByText("Villa Rotonda").closest("[role='button']");
-    (cell as HTMLElement).focus();
+    await user.click(
+      screen.getByRole("button", {
+        name: `${es.admin.editCell.replace("{campo}", "Nombre")}: Villa Rotonda`,
+      })
+    );
+
+    expect(screen.getByDisplayValue("Villa Rotonda")).toBeInTheDocument();
+  });
+
+  it("puts the pencil in the tab order, so the keyboard can open a cell too", async () => {
+    const user = userEvent.setup();
+    renderGrid();
+
+    const pencil = screen.getByRole("button", {
+      name: `${es.admin.editCell.replace("{campo}", "Nombre")}: Villa Rotonda`,
+    });
+    pencil.focus();
     await user.keyboard("{Enter}");
 
     expect(screen.getByDisplayValue("Villa Rotonda")).toBeInTheDocument();
+  });
+
+  it("names the pencil after its column, and says when the cell is empty", () => {
+    renderGrid({
+      rows: [{ id: "row-1", name: "", amount: null, status: "activo", notes: null }],
+    });
+
+    expect(
+      screen.getByRole("button", {
+        name: `${es.admin.editCell.replace("{campo}", "Nombre")}: ${es.admin.emptyValue}`,
+      })
+    ).toBeInTheDocument();
   });
 
   it("keeps the value on screen after committing, before any refresh", async () => {
@@ -100,7 +128,7 @@ describe("committing a cell", () => {
 });
 
 describe("cells that must never be edited", () => {
-  it("does not open a read-only column", async () => {
+  it("does not open a read-only column, and offers no pencil for it", async () => {
     const user = userEvent.setup();
     const { onCellCommit } = renderGrid();
 
@@ -108,6 +136,11 @@ describe("cells that must never be edited", () => {
 
     expect(onCellCommit).not.toHaveBeenCalled();
     expect(screen.queryByDisplayValue("activo")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: new RegExp(es.admin.editCell.replace("{campo}", "Estado")),
+      })
+    ).not.toBeInTheDocument();
   });
 
   it("refuses to report an edit for a row with no id", async () => {

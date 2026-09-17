@@ -98,11 +98,12 @@ export function TransactionFilters({
             {es.transactions.filters.clear}
           </Button>
         ) : null}
+        {/* The count sits at the end of the same row, where the eye already
+            is after the filters — not on a line of its own under them. */}
+        <p aria-live="polite" className="ml-auto text-sm text-ink-500">
+          {countLabel}
+        </p>
       </div>
-
-      <p aria-live="polite" className="text-sm text-zinc-500">
-        {countLabel}
-      </p>
     </div>
   );
 }

@@ -70,6 +70,81 @@ describe("ReadOnlyDataTable — rendering", () => {
   });
 });
 
+describe("ReadOnlyDataTable — how the list reads", () => {
+  it("aligns numeric columns to the right, header included", () => {
+    render(<ReadOnlyDataTable caption="Movimientos" columns={COLUMNS} rows={ROWS} />);
+
+    const amount = screen.getByText("$45,926");
+    expect(amount.closest("td")?.className).toContain("text-right");
+
+    const header = screen
+      .getAllByRole("columnheader")
+      .find((cell) => cell.textContent === es.transactions.columns.amount);
+    expect(header?.querySelector("div")?.className).toContain("justify-end");
+  });
+
+  it("leaves text columns alone", () => {
+    render(<ReadOnlyDataTable caption="Movimientos" columns={COLUMNS} rows={ROWS} />);
+
+    expect(
+      screen.getByText("Villa Rotonda 118").closest("td")?.className
+    ).not.toContain("text-right");
+  });
+
+  it("says a value is missing with a dash instead of leaving a hole", () => {
+    render(
+      <ReadOnlyDataTable
+        caption="Movimientos"
+        columns={COLUMNS}
+        rows={[{ id: "t3", date: null, projectName: "Sin fecha", type: null, amount: null }]}
+      />
+    );
+
+    // One per empty cell: date, type and amount.
+    expect(screen.getAllByText("—")).toHaveLength(3);
+  });
+
+  it("treats an empty string from renderCell as empty too", () => {
+    render(
+      <ReadOnlyDataTable
+        caption="Movimientos"
+        columns={COLUMNS}
+        rows={ROWS}
+        renderCell={(_row, column) => (column.key === "type" ? "" : undefined)}
+      />
+    );
+
+    expect(screen.getAllByText("—")).toHaveLength(ROWS.length);
+  });
+
+  it("sets the identifying column apart, and only that one", () => {
+    render(
+      <ReadOnlyDataTable
+        caption="Movimientos"
+        columns={COLUMNS}
+        rows={ROWS}
+        emphasizeColumn="projectName"
+      />
+    );
+
+    expect(
+      screen.getByText("Villa Rotonda 118").closest("td")?.className
+    ).toContain("font-medium");
+    expect(screen.getByText("$45,926").closest("td")?.className).not.toContain(
+      "font-medium"
+    );
+  });
+
+  it("separates rows without ruling every cell", () => {
+    render(<ReadOnlyDataTable caption="Movimientos" columns={COLUMNS} rows={ROWS} />);
+
+    // Horizontal hairlines stay; the vertical ones are what turned a list into
+    // a grid.
+    const cells = screen.getAllByRole("cell");
+    expect(cells.every((cell) => !cell.className.includes("border-r"))).toBe(true);
+  });
+});
+
 describe("ReadOnlyDataTable — it is READ ONLY", () => {
   it("renders no editing controls at all", () => {
     render(<ReadOnlyDataTable caption="Movimientos" columns={COLUMNS} rows={ROWS} />);

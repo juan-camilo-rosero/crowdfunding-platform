@@ -156,12 +156,14 @@ export function TableFilterBar({
           </Button>
         ) : null}
 
-        {actions ? <div className="ml-auto flex items-center gap-2">{actions}</div> : null}
-      </div>
+        {/* The count closes the row of filters it describes; the creation
+            button stays at the far end, where an action belongs. */}
+        <p aria-live="polite" className="ml-auto text-sm text-ink-500">
+          {countLabel}
+        </p>
 
-      <p aria-live="polite" className="text-sm text-ink-500">
-        {countLabel}
-      </p>
+        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      </div>
     </div>
   );
 }

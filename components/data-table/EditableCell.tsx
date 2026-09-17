@@ -16,6 +16,12 @@ export type EditableCellProps = {
   onCommit: (value: string) => void;
   /** Read-only cells never enter edit mode. */
   readOnly?: boolean;
+  /**
+   * The cell belongs to the column that IDENTIFIES the record, so it is set in
+   * the darker ink. On a table twenty columns wide, that is what lets the eye
+   * find which row it is on after scrolling sideways.
+   */
+  emphasized?: boolean;
 };
 
 /**
@@ -27,11 +33,12 @@ export type EditableCellProps = {
  * single click.
  *
  * HOW IT OPENS matters, and it is why this is not just a double click: nothing
- * on screen said a cell could be edited, so the grid read as a report. It now
- * opens on double click (the grid convention), on Enter or F2 when focused, and
- * every editable cell is reachable with Tab and shows a pencil on hover. The
- * single click is left alone deliberately — it is what selects text to copy,
- * and taking it away broke reading the table to fill in another one.
+ * on screen said a cell could be edited, so the grid read as a report. It opens
+ * on double click (the grid convention) and on the pencil that appears on
+ * hover — a REAL button, so one click opens the editor and the keyboard reaches
+ * it with Tab and Enter like any other control. The single click on the cell
+ * itself is left alone deliberately: it is what selects text to copy, and
+ * taking it away broke reading one table to fill in another.
  *
  * The cell owns no data — the parent table holds the value.
  */
@@ -40,6 +47,7 @@ export function EditableCell({
   value,
   onCommit,
   readOnly = false,
+  emphasized = false,
 }: EditableCellProps) {
   const meta = getColumnTypeMeta(column.type);
   const [isEditing, setIsEditing] = useState(false);
@@ -103,34 +111,41 @@ export function EditableCell({
       // No `title`: the native tooltip duplicated the visible text.
       <div
         onDoubleClick={startEditing}
-        onKeyDown={(event) => {
-          if (isLocked) return;
-          if (event.key === "Enter" || event.key === "F2") {
-            event.preventDefault();
-            startEditing();
-          }
-        }}
-        // Locked cells stay out of the tab order: there is nothing to open.
-        tabIndex={isLocked ? undefined : 0}
-        role={isLocked ? undefined : "button"}
-        aria-label={
-          isLocked ? undefined : `${column.label}: ${text || es.admin.emptyValue}`
-        }
         className={cn(
-          "group/cell flex h-full items-center gap-1 px-6.25 text-base font-normal text-ink-700 outline-none",
-          !isLocked &&
-            "cursor-text hover:bg-surface focus-visible:bg-surface focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+          "group/cell flex h-full items-center gap-1 px-6.25 text-base font-normal text-ink-700",
+          emphasized && "font-medium text-ink-900",
+          !isLocked && "cursor-text hover:bg-surface",
           meta.align === "right" && "justify-end"
         )}
       >
         <span className="min-w-0 truncate">{text}</span>
 
-        {/* The affordance: shows on hover or keyboard focus, never at rest. */}
+        {/*
+          The affordance, and a real control: it appears on hover or keyboard
+          focus and opening the editor is a plain click on it, so the double
+          click is a shortcut rather than the only way in. It is also what puts
+          every editable cell in the tab order, with a name a screen reader can
+          announce — which a div with role="button" never did as well.
+
+          It keeps its space in the layout while invisible, so showing it never
+          shifts the value under the pointer.
+        */}
         {isLocked ? null : (
-          <PencilIcon
-            aria-hidden="true"
-            className="ml-auto size-3.5 shrink-0 text-ink-400 opacity-0 transition-opacity group-hover/cell:opacity-100 group-focus-visible/cell:opacity-100"
-          />
+          <button
+            type="button"
+            onClick={startEditing}
+            aria-label={`${es.admin.editCell.replace("{campo}", column.label)}: ${
+              text || es.admin.emptyValue
+            }`}
+            className={cn(
+              "ml-auto flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-[5px]",
+              "text-ink-400 opacity-0 transition-[opacity,background-color,color] outline-none",
+              "hover:bg-line hover:text-ink-900",
+              "group-hover/cell:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring/50"
+            )}
+          >
+            <PencilIcon className="size-3.5" aria-hidden="true" />
+          </button>
         )}
       </div>
     );

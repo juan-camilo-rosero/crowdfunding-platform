@@ -151,7 +151,7 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
             type="search"
             inputSize="xl"
             icon={<SearchIcon />}
-            className="max-w-sm rounded-[5px]"
+            className="max-w-sm rounded-[10px]"
             placeholder={es.adminUsers.searchPlaceholder}
             aria-label={es.adminUsers.searchPlaceholder}
             value={query}
@@ -167,17 +167,21 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
             value={filter === "todos" ? null : filter}
             onSelect={(value) => setFilter((value as DirectoryFilter) ?? "todos")}
           />
-        </div>
 
-        <p aria-live="polite" className="text-sm text-ink-500">
-          {countLabel}
-        </p>
+          {/* The count sits at the end of the same row, where the eye already
+              is after the filters — not on a line of its own under them. */}
+          <p aria-live="polite" className="ml-auto text-sm text-ink-500">
+            {countLabel}
+          </p>
+        </div>
       </div>
 
       <ReadOnlyDataTable
         caption={es.adminUsers.tableCaption}
         columns={COLUMNS}
         rows={visible as unknown as TableRow[]}
+        // A directory is scanned by name: it leads the row.
+        emphasizeColumn="fullName"
         renderCell={(row, column) => {
           const user = row as unknown as UserDirectoryEntry;
 
