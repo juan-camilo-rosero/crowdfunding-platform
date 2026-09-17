@@ -13,6 +13,7 @@ import {
 } from "@/lib/projects/photos";
 
 const ADMIN_ROUTE = "/admin";
+const CATALOG_ROUTE = "/portafolio";
 
 /**
  * Adding and removing the photos of a project.
@@ -26,6 +27,11 @@ const ADMIN_ROUTE = "/admin";
  * the explicit admin check here: projects_admin_write for the row and
  * project_photos_admin_* for the object. SUPABASE_SERVICE_ROLE_KEY appears in
  * neither function — it would bypass both.
+ *
+ * THE FILE ITSELF no longer travels through here by default: the browser puts
+ * it in Storage directly (lib/projects/photo-upload.ts) and `attachProjectPhotos`
+ * only writes the row. `uploadProjectPhotos` stays as the fallback for when that
+ * direct call is refused, and is capped well under the serverless body limit.
  */
 
 /** Refuses anyone who is not an admin. Returns their client when they are. */
@@ -63,29 +69,68 @@ async function readPhotos(
 }
 
 /**
- * Uploads one image and appends its public URL to the project.
- *
- * The file is taken from FormData rather than a JSON body because that is the
- * only way a File survives the trip to a Server Action.
+ * Every screen that shows a project photo, so a change is visible wherever it
+ * is looked at rather than only in the panel it was made from.
  */
-export async function uploadProjectPhoto(
-  formData: FormData
-): Promise<ProjectPhotosResult> {
-  const batchFormData = new FormData();
-  const projectId = formData.get("projectId")?.toString() ?? "";
-  const file = formData.get("file");
-
-  batchFormData.append("projectId", projectId);
-  if (file) batchFormData.append("files", file);
-
-  return uploadProjectPhotos(batchFormData);
+function revalidateProject(projectId: string) {
+  revalidatePath(ADMIN_ROUTE);
+  revalidatePath(CATALOG_ROUTE);
+  revalidatePath(`/proyecto/${projectId}`);
 }
 
 /**
- * Uploads one or more images and appends their public URLs to the project.
+ * Attaches photos ALREADY IN STORAGE to a project.
  *
- * The project row is updated once, after all object uploads succeed, so a
- * multi-photo selection cannot overwrite itself with competing writes.
+ * The urls are checked against our own bucket before being written: this action
+ * takes strings from the browser, and a url pointing anywhere else would turn
+ * the gallery into a way of rendering a third party's content from our pages.
+ */
+export async function attachProjectPhotos(input: {
+  projectId: string;
+  urls: string[];
+}): Promise<ProjectPhotosResult> {
+  const supabase = await requireAdmin();
+  if (!supabase) {
+    return { ok: false, error: es.admin.photos.errors.notAdmin };
+  }
+
+  const { projectId, urls } = input;
+
+  if (!projectId || urls.length === 0) {
+    return { ok: false, error: es.admin.photos.errors.noFile };
+  }
+  if (urls.some((url) => photoPathFromUrl(url) === null)) {
+    return { ok: false, error: es.admin.photos.errors.saveFailed };
+  }
+
+  const current = await readPhotos(supabase, projectId);
+  if (current === null) {
+    return { ok: false, error: es.admin.photos.errors.projectNotFound };
+  }
+
+  // A url already on the list means the same photo was attached twice; keeping
+  // one copy is what the gallery expects.
+  const photos = [...current, ...urls.filter((url) => !current.includes(url))];
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ main_photos: photos, updated_at: new Date().toISOString() })
+    .eq("id", projectId);
+
+  if (error) {
+    return { ok: false, error: es.admin.photos.errors.saveFailed };
+  }
+
+  revalidateProject(projectId);
+  return { ok: true, photos };
+}
+
+/**
+ * FALLBACK upload: the file travels inside the action's request body.
+ *
+ * Only used when the browser could not reach Storage directly, and only for
+ * files under the serverless body limit — over it the platform cuts the request
+ * off before this code ever runs.
  */
 export async function uploadProjectPhotos(
   formData: FormData
@@ -160,7 +205,7 @@ export async function uploadProjectPhotos(
     return { ok: false, error: es.admin.photos.errors.saveFailed };
   }
 
-  revalidatePath(ADMIN_ROUTE);
+  revalidateProject(projectId);
   return { ok: true, photos };
 }
 
@@ -198,7 +243,7 @@ export async function removeProjectPhoto(input: {
     await supabase.storage.from(PROJECT_PHOTOS_BUCKET).remove([path]);
   }
 
-  revalidatePath(ADMIN_ROUTE);
+  revalidateProject(projectId);
   return { ok: true, photos };
 }
 
@@ -241,6 +286,6 @@ export async function setProjectCoverPhoto(input: {
     return { ok: false, error: es.admin.photos.errors.saveFailed };
   }
 
-  revalidatePath(ADMIN_ROUTE);
+  revalidateProject(projectId);
   return { ok: true, photos };
 }

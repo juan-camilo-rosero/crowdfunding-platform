@@ -213,3 +213,71 @@
     @apply font-sans;
   }
 }
+
+/* ─── Scrollbar utilities ──────────────────────────────────────────────────
+   Custom CSS scroll utilities because the project doesn't depend on any
+   third-party scrollbar plugin. Applied on the editable table so desktop
+   users can discover the horizontal scroll affordance.                       */
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Thin styled scrollbar — visible but unobtrusive. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--line);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Hover: slightly more visible thumb */
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background-color: var(--ink-500);
+  }
+
+  /* Data grid scrollbar — deliberately ALWAYS VISIBLE and chunky.
+     `scrollbar-thin` was too discreet to be found: on a table wider than the
+     screen the only hint that more columns existed was a 6px hairline that
+     most browsers fade out when idle. This one keeps a solid track and a
+     grabbable thumb so the horizontal scroll reads as a control.
+     `scrollbar-gutter: stable` reserves the space, so showing the bar never
+     reflows the grid. */
+  .scrollbar-table {
+    scrollbar-width: auto;
+    scrollbar-color: var(--ink-400) var(--surface);
+    scrollbar-gutter: stable;
+  }
+  .scrollbar-table::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  .scrollbar-table::-webkit-scrollbar-track {
+    background: var(--surface);
+  }
+  .scrollbar-table::-webkit-scrollbar-thumb {
+    background-color: var(--ink-400);
+    border: 3px solid var(--surface);
+    border-radius: 9999px;
+  }
+  .scrollbar-table::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ink-700);
+  }
+  .scrollbar-table::-webkit-scrollbar-corner {
+    background: var(--surface);
+  }
+}

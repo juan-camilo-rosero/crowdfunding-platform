@@ -29,4 +29,57 @@ Contrato de inversión firmado dentro del **onboarding de inversión**, NO en el
 - Límites de comportamiento: responde sobre el portal y los datos propios del usuario; no da asesoría de inversión, no promete retornos, no toma decisiones. Ante preguntas de ese tipo ("¿me conviene invertir?", "¿cuánto voy a ganar?"), redirige al equipo de Investors 180.
 
 ## Notificaciones por email
-Eventos: nuevo reporte publicado, solicitud de reasignación resuelta, nuevo proyecto en captación. Solo email (no hay notificaciones in-app en el alcance actual).
+Eventos: nuevo reporte publicado, solicitud de reasignación resuelta, nuevo proyecto en captación. Canal independiente de las notificaciones push (ver la sección siguiente): el email no dispara push ni al revés.
+
+## Notificaciones push (app móvil)
+
+La app móvil del inversionista (`investors_180_mobile`, repo aparte) apunta a **este mismo proyecto de Supabase**. Los nombres de tabla y columna de abajo son el contrato entre los dos repos: renombrar algo rompe un cliente que este repo no compila ni despliega.
+
+### Tablas
+
+- **`push_tokens`** (`id`, `user_id`, `token`, `platform`, `device_name`, `created_at`, `last_seen_at`). Una fila por dispositivo. La escribe la app móvil; `token` es único, así que un celular que cambia de dueño mueve la fila en vez de duplicarla. RLS: cada quien gestiona solo los suyos.
+- **`notifications`** (`id`, `user_id`, `title`, `body`, `data`, `created_at`, `read_at`). Una fila por destinatario. RLS: el inversionista lee solo las suyas y solo puede escribir `read_at` (restricción por GRANT de columna, no por policy: RLS ve filas completas). El INSERT desde el panel está limitado a `public.is_admin()`.
+
+### Un solo pipeline de entrega
+
+```
+insert into public.notifications
+  → Database Webhook (INSERT sobre notifications)
+      → Edge Function push-send
+          → Expo Push API
+```
+
+**Insertar la fila ES enviar.** Nada del código web habla con Expo. Los dos emisores solo insertan:
+
+1. **Automático:** trigger `projects_notify_investors` (AFTER INSERT sobre `projects`) → una fila por inversionista vinculado, con `data = {"type": "project_created", "project_id": ...}`. Es SECURITY DEFINER, así que también funciona cuando el proyecto entra por `admin_save_table_changes`.
+2. **Manual:** panel `/admin/notificaciones` → Server Action `sendNotification`, con `data = {"type": "admin_message"}`.
+
+**Quién es inversionista** en el fan-out: quien tiene fila **vinculada** en `investors` (`user_id is not null`). Es la capacidad derivada del vínculo, nunca `users.role` — la misma regla que usan las policies y el sidebar.
+
+### Edge Function `push-send`
+
+Código en `supabase/functions/push-send/index.ts`. Envía en lotes de máximo 100 destinatarios y borra de `push_tokens` los tokens que Expo reporte como `DeviceNotRegistered`.
+
+```
+supabase functions deploy push-send
+supabase secrets set EXPO_ACCESS_TOKEN=...
+```
+
+- `EXPO_ACCESS_TOKEN` se genera en **expo.dev → Access Tokens**. Sin él la función responde 500 y no entrega nada (falla ruidosa a propósito: la notificación ya está en la base, perderla en silencio sería peor).
+- `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta la plataforma.
+- Se despliega con `verify_jwt = false` (ver `supabase/config.toml`) **y eso no la deja abierta**: ese flag acepta el JWT de cualquier usuario logueado, y este endpoint decide a quién le suena el celular. La función compara ella misma el header `Authorization` contra `SUPABASE_SERVICE_ROLE_KEY`, que ningún cliente tiene.
+
+### Database Webhook (se configura en el dashboard)
+
+Database → Webhooks → Create a new hook:
+
+| Campo | Valor |
+|---|---|
+| Table | `public.notifications` |
+| Events | `Insert` |
+| Type | Supabase Edge Functions → `push-send` |
+| Method | `POST` |
+| Timeout | `1000` ms |
+| HTTP Headers | `Authorization: Bearer <SERVICE_ROLE_KEY>` |
+
+El timeout de 1000 ms es el del webhook, no el de la entrega: la función responde rápido y Expo hace el resto.

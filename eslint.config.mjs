@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Deno code, not Next code. See the same exclusion in tsconfig.json.
+    "supabase/functions/**",
   ]),
   {
     rules: {

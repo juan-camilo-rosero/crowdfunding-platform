@@ -180,4 +180,26 @@ Rastreo del proceso Truora.
 | decline_reason | text | si rechazado |
 | completed_at | timestamptz | lo fija el webhook |
 
+## push_tokens
+Tokens de Expo de la app móvil (`investors_180_mobile`, repo aparte, mismo proyecto de Supabase). **Contrato compartido: no renombrar tabla ni columnas.** No lleva `updated_at`; su equivalente es `last_seen_at`.
+| Campo | Tipo | Notas |
+|---|---|---|
+| user_id | uuid | FK users, on delete cascade |
+| token | text | único: un celular que cambia de dueño mueve la fila, no la duplica |
+| platform | text enum | `ios` · `android` (en inglés: valor de la plataforma, no texto de UI) |
+| device_name | text | nullable |
+| last_seen_at | timestamptz | lo refresca la app al abrir |
+
+## notifications
+Feed de notificaciones, una fila por destinatario. **Contrato compartido con la app móvil: no renombrar.** Insertar la fila ES enviar la notificación: un Database Webhook la entrega a la Edge Function `push-send` (ver integrations.md). No lleva `updated_at`.
+| Campo | Tipo | Notas |
+|---|---|---|
+| user_id | uuid | FK users, on delete cascade |
+| title | text | |
+| body | text | |
+| data | jsonb | ruteo del tap: `{"type": "project_created", "project_id": ...}` o `{"type": "admin_message"}` |
+| read_at | timestamptz | nullable; lo marca el inversionista |
+
+RLS: el inversionista lee solo las suyas y de escritura solo puede tocar `read_at` (GRANT de columna, porque RLS ve filas completas). El INSERT queda para `public.is_admin()` desde el panel y para el trigger `projects_notify_investors` (SECURITY DEFINER), que al crear un proyecto escribe una fila por inversionista **vinculado** (fila en `investors` con `user_id`), nunca por `users.role`.
+
 <!-- Nota: no existe tabla de historial de chat. El chatbot no persiste conversaciones (ver integrations.md). -->

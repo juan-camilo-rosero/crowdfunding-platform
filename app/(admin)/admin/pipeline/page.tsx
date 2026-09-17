@@ -35,7 +35,11 @@ export default async function PipelinePage({
   let query = supabase
     .from("investors")
     .select("*")
+    // Total order: rows created in the same batch tie on created_at, and tied
+    // rows come back in whatever order the plan produced — which is what made
+    // the funnel reshuffle itself after every save. The id breaks every tie.
     .order("created_at", { ascending: true })
+    .order("id", { ascending: true })
     .limit(100);
 
   if (activeStage !== ALL_STAGES) {

@@ -385,6 +385,18 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Delivers every row inserted into public.notifications to the Expo Push API.
+# Called only by the Database Webhook on that table.
+#
+# verify_jwt = false is deliberate and NOT a relaxation: that flag accepts any
+# valid project JWT, which includes every signed-in investor's token, and this
+# endpoint decides whose phone rings. The function checks the Authorization
+# header against SUPABASE_SERVICE_ROLE_KEY itself instead, which no client
+# holds. See supabase/functions/push-send/index.ts.
+[functions.push-send]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

@@ -36,5 +36,27 @@ using (
   )
 );
 
-comment on policy "documents_objects_select_entitled" on storage.objects is
-  'Lets a user read an object of the documents bucket only when a public.documents row they are allowed to see points at it. The entitlement comes from that table''s RLS, not from a rule duplicated here.';
+-- NO QUITAR ESTA ENVOLTURA. No es defensa de más.
+--
+-- COMMENT ON POLICY exige ser DUEÑO de la tabla. En Supabase alojado el rol que
+-- corre las migraciones lo es sobre storage.objects; en el stack local NO, y la
+-- sentencia aborta con 42501 ("must be owner of relation objects"). Sin esta
+-- envoltura, `supabase start` y `supabase db reset` fallan aquí y el entorno
+-- local del proyecto queda inservible — estuvo así desde el 4 ago 2026.
+--
+-- Se captura EXCLUSIVAMENTE insufficient_privilege. Cualquier otro error sigue
+-- abortando la migración, que es lo que debe pasar: un fallo real no puede
+-- pasar desapercibido.
+--
+-- Solo se envuelve el COMMENT, nunca el CREATE POLICY de arriba. Un comentario
+-- es documentación y su ausencia no cambia ningún comportamiento; una política
+-- sí, y si esa fallara queremos que la migración se detenga.
+do $do$
+begin
+  comment on policy "documents_objects_select_entitled" on storage.objects is
+    'Lets a user read an object of the documents bucket only when a public.documents row they are allowed to see points at it. The entitlement comes from that table''s RLS, not from a rule duplicated here.';
+exception when insufficient_privilege then
+  raise notice
+    'Sin permiso para comentar documents_objects_select_entitled (esperado en local). La política se creó igual.';
+end
+$do$;

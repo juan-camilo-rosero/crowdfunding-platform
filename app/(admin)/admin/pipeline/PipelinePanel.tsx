@@ -70,7 +70,8 @@ export function PipelinePanel({
       rows={rows}
       allowInsert={allowInsert}
       onSave={(changes) => saveTableChanges("inversionistas", prepare(changes))}
-      renderFilter={(guard) => (
+      renderFilter={({ guard, createButton }) => (
+        <div className="flex flex-wrap items-center gap-2">
         <FilterDropdown
           icon={<FilterIcon />}
           ariaLabel={es.pipeline.filterLabel}
@@ -92,6 +93,10 @@ export function PipelinePanel({
             )
           }
         />
+
+          {/* The creation form, on the same row as the filter it belongs to. */}
+          <div className="ml-auto">{createButton}</div>
+        </div>
       )}
     />
   );

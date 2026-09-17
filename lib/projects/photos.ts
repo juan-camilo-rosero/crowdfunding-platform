@@ -19,6 +19,36 @@ export const ACCEPTED_IMAGE_TYPES = [
 /** Matches the bucket's own 30 MB ceiling, so the check fails early and clearly. */
 export const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 
+/**
+ * Largest file still worth sending THROUGH a Server Action.
+ *
+ * Photos go straight from the browser to Storage now; the Server Action is
+ * only the fallback for when that call fails. It is kept small on purpose,
+ * because that path crosses a serverless function whose request body is capped
+ * well below our own 30 MB limit (4.5 MB on Vercel) — a bigger file does not
+ * fail slowly there, it fails after uploading everything, which is exactly the
+ * hang this replaced.
+ */
+export const MAX_SERVER_UPLOAD_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Nothing may hang forever. Storage answers in well under a second for a small
+ * file; a minute without an answer is a broken connection, not a slow one, and
+ * the UI has to be able to say so.
+ */
+export const PHOTO_UPLOAD_TIMEOUT_MS = 60_000;
+
+/** Why a file was refused, or null when it is fine. Checked before uploading. */
+export function rejectPhotoFile(file: {
+  type: string;
+  size: number;
+}): "type" | "size" | "empty" | null {
+  if (file.size === 0) return "empty";
+  if (!isAcceptedImage(file.type)) return "type";
+  if (file.size > MAX_PHOTO_BYTES) return "size";
+  return null;
+}
+
 export type ProjectPhotosResult =
   | { ok: true; photos: string[] }
   | { ok: false; error: string };

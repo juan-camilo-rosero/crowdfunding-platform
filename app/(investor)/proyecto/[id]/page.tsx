@@ -7,6 +7,7 @@ import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import {
   getCurrentUserProfile,
   getInvestorIds,
+  isAdmin,
 } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isClosedToInvestment } from "@/lib/projects/enums";
@@ -18,6 +19,8 @@ import { ProjectReports } from "@/components/project/ProjectReports";
 import { ProjectDocuments } from "@/components/project/ProjectDocuments";
 import { InterestForm } from "@/components/project/InterestForm";
 import { ProjectMyInvestment } from "@/components/project/ProjectMyInvestment";
+import { ProjectAdminBar } from "@/components/project/ProjectAdminBar";
+import { findAdminTable } from "@/app/(admin)/admin/table-definitions";
 import {
   ProjectTabs,
   type ProjectTabId,
@@ -88,6 +91,11 @@ export default async function ProjectDetailPage({
   }
   // One cached read per request, shared with the layout's sidebar check.
   const investorIds = await getInvestorIds();
+
+  // Decided on the SERVER, like the "Mi inversión" tab: a non-admin never
+  // receives the editing controls, and the actions behind them check the role
+  // again anyway.
+  const canEdit = await isAdmin();
 
   const [positionsResult, milestonesResult, reportsResult, documentsResult] =
     await Promise.all([
@@ -281,7 +289,22 @@ export default async function ProjectDetailPage({
         {es.projectDetail.back}
       </Link>
 
-      <ProjectGallery photos={project.main_photos} />
+      {/* The admin controls float over the gallery, so the wrapper positions
+          them; without an admin it is an ordinary block. */}
+      <div className="relative">
+        <ProjectGallery photos={project.main_photos} />
+
+        {canEdit ? (
+          <ProjectAdminBar
+            projectId={project.id}
+            projectName={project.name ?? projectTitle(project.type, project.city)}
+            project={project}
+            // The same column definitions the panel edits this table with.
+            columns={findAdminTable("proyectos").columns}
+            photos={project.main_photos ?? []}
+          />
+        ) : null}
+      </div>
 
       {/* 2/3 + 1/3. The columns stack under lg, where a sidebar beside the
           content would leave both too narrow to read. */}

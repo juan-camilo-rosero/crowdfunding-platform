@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Edge Functions run on Deno, not on Next's TypeScript: they use Deno
+    // globals and `jsr:` imports that this compiler cannot resolve. They are
+    // deployed with the Supabase CLI and type-checked by `deno check`.
+    "supabase/functions"
+  ]
 }

@@ -4,7 +4,16 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { ImageIcon, StarIcon, TrashIcon, UploadIcon } from "lucide-react";
 import { es } from "@/i18n";
-import { ACCEPTED_IMAGE_TYPES } from "@/lib/projects/photos";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_SERVER_UPLOAD_BYTES,
+  rejectPhotoFile,
+  type ProjectPhotosResult,
+} from "@/lib/projects/photos";
+import {
+  removeUploadedObjects,
+  uploadPhotosToStorage,
+} from "@/lib/projects/photo-upload";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,10 +25,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  attachProjectPhotos,
   removeProjectPhoto,
   setProjectCoverPhoto,
   uploadProjectPhotos,
-} from "./photo-actions";
+} from "@/app/(admin)/admin/photo-actions";
 
 export type ProjectPhotosDialogProps = {
   projectId: string;
@@ -32,7 +42,9 @@ export type ProjectPhotosDialogProps = {
 };
 
 /**
- * Manages the photos of one project.
+ * Manages the photos of one project. Used from the admin grid AND from the
+ * project page in the catalogue, which is why it lives here rather than under
+ * app/(admin).
  *
  * Not built on FormDialog: that shell is for forms that submit once and close,
  * and this is a workspace — each upload and each removal is its own committed
@@ -41,6 +53,14 @@ export type ProjectPhotosDialogProps = {
  *
  * The list held here is whatever the server last confirmed, never an optimistic
  * guess: a photo that failed to upload must not appear as though it had.
+ *
+ * THE FAILURE MODE THIS FIXES: an upload that never answered left the dialog
+ * on "Subiendo…" forever, and since it refused to close while it believed work
+ * was in flight, the only way out was reloading the page — which threw away
+ * every edit made in the grid behind it. Three things changed: the file goes
+ * straight to Storage (no serverless body limit to hit), every call is wrapped
+ * so a rejection becomes a message instead of a frozen promise, and the dialog
+ * can always be closed.
  */
 export function ProjectPhotosDialog({
   projectId,
@@ -54,6 +74,9 @@ export function ProjectPhotosDialog({
 
   const [photos, setPhotos] = useState<string[]>(initialPhotos);
   const [isBusy, setIsBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
 
   function commit(next: string[]) {
@@ -61,62 +84,123 @@ export function ProjectPhotosDialog({
     onPhotosChange?.(next);
   }
 
+  /**
+   * Every server call goes through here. A Server Action can REJECT — a lost
+   * connection, a body the platform refused, a crash on the server — and an
+   * unguarded `await` on a rejected action is what froze this dialog.
+   */
+  async function run(action: () => Promise<ProjectPhotosResult>) {
+    setIsBusy(true);
+    setError(null);
+
+    try {
+      const result = await action();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      commit(result.photos);
+    } catch {
+      setError(es.admin.photos.errors.unexpected);
+    } finally {
+      setIsBusy(false);
+      setProgress(null);
+    }
+  }
+
   async function handleFiles(files: File[]) {
     if (files.length === 0) return;
 
-    setIsBusy(true);
-    setError(null);
+    // Refused BEFORE anything leaves the browser, and the message names the
+    // file: "una de tus imágenes es muy pesada" is not actionable with six
+    // selected.
+    for (const file of files) {
+      const rejection = rejectPhotoFile(file);
+      if (!rejection) continue;
 
-    const formData = new FormData();
-    formData.append("projectId", projectId);
-    files.forEach((file) => formData.append("files", file));
-
-    const result = await uploadProjectPhotos(formData);
-
-    setIsBusy(false);
-    if (!result.ok) {
-      setError(result.error);
+      setError(
+        es.admin.photos.errors[
+          rejection === "type"
+            ? "badTypeNamed"
+            : rejection === "size"
+              ? "tooLargeNamed"
+              : "emptyNamed"
+        ].replace("{archivo}", file.name)
+      );
       return;
     }
-    commit(result.photos);
-  }
 
-  async function handleMakeCover(url: string) {
     setIsBusy(true);
     setError(null);
+    setProgress({ done: 0, total: files.length });
 
-    const result = await setProjectCoverPhoto({ projectId, url });
+    try {
+      // Straight to Storage, with the admin's own session.
+      const upload = await uploadPhotosToStorage(projectId, files, (done, total) =>
+        setProgress({ done, total })
+      );
 
-    setIsBusy(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+      if (upload.ok) {
+        const result = await attachProjectPhotos({
+          projectId,
+          urls: upload.uploaded.map((photo) => photo.publicUrl),
+        });
+
+        if (!result.ok) {
+          // The row is the source of truth: files it does not point at are
+          // rubbish, so they go rather than linger in the bucket.
+          await removeUploadedObjects(upload.uploaded.map((photo) => photo.path));
+          setError(result.error);
+          return;
+        }
+
+        commit(result.photos);
+        return;
+      }
+
+      // Direct upload refused. It may be a policy, a blocked request or an
+      // offline browser; small files get one more chance through the Server
+      // Action, which reaches Storage from the server side instead.
+      await removeUploadedObjects(upload.uploaded.map((photo) => photo.path));
+
+      const retryable = files.every(
+        (file) => file.size <= MAX_SERVER_UPLOAD_BYTES
+      );
+      if (!retryable) {
+        setError(
+          es.admin.photos.errors.uploadFailedNamed.replace(
+            "{archivo}",
+            upload.failedFile
+          )
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("projectId", projectId);
+      files.forEach((file) => formData.append("files", file));
+
+      const fallback = await uploadProjectPhotos(formData);
+      if (!fallback.ok) {
+        setError(fallback.error);
+        return;
+      }
+      commit(fallback.photos);
+    } catch {
+      setError(es.admin.photos.errors.unexpected);
+    } finally {
+      setIsBusy(false);
+      setProgress(null);
     }
-    commit(result.photos);
-  }
-
-  async function handleRemove(url: string) {
-    setIsBusy(true);
-    setError(null);
-
-    const result = await removeProjectPhoto({ projectId, url });
-
-    setIsBusy(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    commit(result.photos);
   }
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => {
-        // An upload in flight must not be abandoned halfway.
-        if (isBusy && !next) return;
-        onOpenChange(next);
-      }}
+      // Closing is ALWAYS allowed. An upload in flight keeps going and commits
+      // on its own; being unable to leave a dialog is how unsaved work in the
+      // screen behind it got lost.
+      onOpenChange={onOpenChange}
     >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -135,7 +219,7 @@ export function ProjectPhotosDialog({
             <p className="text-sm text-ink-500">{es.admin.photos.emptyHint}</p>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <ul className="grid max-h-[45vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3 scrollbar-thin">
             {photos.map((url, index) => (
               <li
                 key={url}
@@ -164,7 +248,9 @@ export function ProjectPhotosDialog({
                 {index !== 0 ? (
                   <button
                     type="button"
-                    onClick={() => handleMakeCover(url)}
+                    onClick={() =>
+                      void run(() => setProjectCoverPhoto({ projectId, url }))
+                    }
                     disabled={isBusy}
                     aria-label={es.admin.photos.makeCoverLabel}
                     title={es.admin.photos.makeCoverLabel}
@@ -180,7 +266,9 @@ export function ProjectPhotosDialog({
 
                 <button
                   type="button"
-                  onClick={() => handleRemove(url)}
+                  onClick={() =>
+                    void run(() => removeProjectPhoto({ projectId, url }))
+                  }
                   disabled={isBusy}
                   aria-label={es.admin.photos.removeLabel}
                   className={cn(
@@ -195,6 +283,16 @@ export function ProjectPhotosDialog({
             ))}
           </ul>
         )}
+
+        {/* Which file of how many: a single spinner over a six-photo upload
+            says nothing about whether it is moving. */}
+        {progress ? (
+          <p aria-live="polite" className="text-sm text-ink-500">
+            {es.admin.photos.progress
+              .replace("{n}", String(Math.min(progress.done + 1, progress.total)))
+              .replace("{total}", String(progress.total))}
+          </p>
+        ) : null}
 
         {error ? (
           <p
@@ -238,7 +336,6 @@ export function ProjectPhotosDialog({
           <Button
             type="button"
             variant="ghost"
-            disabled={isBusy}
             onClick={() => onOpenChange(false)}
           >
             {es.admin.photos.close}

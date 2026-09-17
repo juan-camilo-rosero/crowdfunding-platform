@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { PlusIcon } from "lucide-react";
 import { resolveColumnWidth } from "@/lib/table/format-cell";
-import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
+import type { TableColumn, TableRow } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./EditableCell";
 import { DataTableHeaderCell } from "./DataTableHeaderCell";
@@ -21,20 +20,21 @@ export type EditableDataTableProps = {
   /** Field used as the stable row key. Defaults to "id", falls back to index. */
   rowIdKey?: string;
   /**
-   * Reports the full pending batch (updates + inserts) after every change, so
-   * the caller can enable its save button and hand the batch to the server.
+   * Reports ONE committed cell, as soon as it is committed. The caller decides
+   * when it reaches the server; this component does not wait for an answer.
    */
-  onChangesChange?: (changes: TableChanges) => void;
-  /** Renders the trailing draft row that creates records. */
-  showNewRecordRow?: boolean;
+  onCellCommit?: (rowId: string, columnKey: string, value: string) => void;
+  /** Rows with an edit not yet confirmed by the server. Marked, not blocked. */
+  pendingRowIds?: readonly string[];
+  /** Rows whose last save failed. Marked so the admin can find them again. */
+  errorRowIds?: readonly string[];
   /**
-   * Optional trailing column holding a control per EXISTING record — the
-   * projects tab uses it to open the photo manager.
+   * Optional trailing column holding a control per record — the projects tab
+   * uses it to open the photo manager.
    *
    * Deliberately a render prop rather than a new column type: what goes in it
    * is a client component with its own state, which a serializable
-   * TableColumn cannot describe. It is absent from the draft row, since a
-   * record that has not been created yet has no id to act on.
+   * TableColumn cannot describe.
    */
   rowAction?: { label: string; width?: number; render: (row: TableRow) => ReactNode };
   emptyMessage?: string;
@@ -44,37 +44,34 @@ export type EditableDataTableProps = {
  * Airtable-style editable grid, reusable for any table in the app.
  *
  * One single grid: the row-number column is the first column, not a separate
- * block. Only the whole grid scrolls horizontally, and it is the one section
- * allowed to exceed the protected content width.
+ * block. Only the whole grid scrolls, and it is the one section allowed to
+ * exceed the protected content width.
  *
- * Editing is per cell (double click; single click on `select` columns). Changes
- * accumulate LOCALLY and are reported through `onChangesChange`; the caller
- * decides when to persist them (batch save).
+ * Editing is per cell (double click, or Enter/F2 on the focused cell; single
+ * click on `select` columns). Every commit is reported through `onCellCommit`
+ * the moment it happens — records are NOT created here: that is a form, not a
+ * grid row, and it lives in RecordFormDialog.
  *
  * IMPORTANT — pass a `key` tied to the dataset:
  *
  *     <EditableDataTable key={tableId} columns={...} rows={...} />
  *
  * Swapping `columns`/`rows` for a different table does NOT reset this
- * component: React keeps it mounted at the same tree position, so drafts,
- * created rows and cell edits would carry over into the new table. The `key` is
- * what forces a remount and clears them.
+ * component: React keeps it mounted at the same tree position, so cell edits
+ * would carry over into the new table. The `key` is what forces a remount.
  */
 export function EditableDataTable({
   columns,
   rows,
   rowIdKey = "id",
-  onChangesChange,
-  showNewRecordRow = true,
+  onCellCommit,
+  pendingRowIds,
+  errorRowIds,
   rowAction,
   emptyMessage = "No hay registros todavía.",
 }: EditableDataTableProps) {
-  /** Pending cell edits, grouped by row id then column. */
+  /** Locally committed values, kept on screen until the server confirms them. */
   const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
-  /** Rows created locally from the draft row; they become INSERTs on save. */
-  const [createdRows, setCreatedRows] = useState<TableRow[]>([]);
-  /** Values typed into the draft row before it becomes a record. */
-  const [draft, setDraft] = useState<TableRow>({});
 
   const widths = useMemo(
     () => columns.map((column) => resolveColumnWidth(column)),
@@ -89,86 +86,51 @@ export function EditableDataTable({
     [widths, actionWidth]
   );
 
-  const allRows = useMemo(() => [...rows, ...createdRows], [rows, createdRows]);
-
   const rowIds = useMemo(
-    () => allRows.map((row, index) => String(row[rowIdKey] ?? "row-" + index)),
-    [allRows, rowIdKey]
-  );
-
-  /** Ids that already exist in the database, as opposed to local drafts. */
-  const persistedIds = useMemo(
-    () =>
-      new Set(rows.map((row, index) => String(row[rowIdKey] ?? "row-" + index))),
+    () => rows.map((row, index) => String(row[rowIdKey] ?? "row-" + index)),
     [rows, rowIdKey]
   );
 
   /**
-   * Turns local state into the batch the server expects: edits to persisted
-   * rows are UPDATEs, locally created rows (with their later edits merged) are
-   * INSERTs. Local ids never leave the client.
+   * Ids the server would recognise. A row without one can still be READ — a
+   * view or an aggregate may legitimately have no id — but an edit to it has
+   * nowhere to go: the batch save addresses records by id, so sending the
+   * positional fallback would either fail the whole batch or, worse, name a
+   * record that is not the one on screen.
    */
-  function computeChanges(
-    nextEdits: Record<string, Record<string, string>>,
-    nextCreated: TableRow[]
-  ): TableChanges {
-    const updates = Object.entries(nextEdits)
-      .filter(([rowId]) => persistedIds.has(rowId))
-      .map(([rowId, values]) => ({ id: rowId, values }));
+  const persistedIds = useMemo(
+    () =>
+      new Set(
+        rows
+          .map((row) => row[rowIdKey])
+          .filter((id) => id !== null && id !== undefined && id !== "")
+          .map(String)
+      ),
+    [rows, rowIdKey]
+  );
 
-    const inserts = nextCreated.map((row) => {
-      const localId = String(row[rowIdKey]);
-      const merged: Record<string, string> = {};
-      for (const column of columns) {
-        const edited = nextEdits[localId]?.[column.key];
-        const value = edited !== undefined ? edited : row[column.key];
-        if (value !== undefined && value !== null && value !== "") {
-          merged[column.key] = String(value);
-        }
-      }
-      return merged;
-    });
-
-    return { updates, inserts };
-  }
+  const pending = useMemo(() => new Set(pendingRowIds ?? []), [pendingRowIds]);
+  const failed = useMemo(() => new Set(errorRowIds ?? []), [errorRowIds]);
 
   function valueFor(rowIndex: number, column: TableColumn) {
     const rowId = rowIds[rowIndex];
     const edited = edits[rowId]?.[column.key];
-    return edited !== undefined ? edited : allRows[rowIndex][column.key];
+    return edited !== undefined ? edited : rows[rowIndex][column.key];
   }
 
   function handleCommit(rowIndex: number, column: TableColumn, value: string) {
     const rowId = rowIds[rowIndex];
-    const nextEdits = {
-      ...edits,
-      [rowId]: { ...(edits[rowId] ?? {}), [column.key]: value },
-    };
-    setEdits(nextEdits);
-    onChangesChange?.(computeChanges(nextEdits, createdRows));
+    if (!persistedIds.has(rowId)) return;
+
+    setEdits((current) => ({
+      ...current,
+      [rowId]: { ...(current[rowId] ?? {}), [column.key]: value },
+    }));
+
+    onCellCommit?.(rowId, column.key, value);
   }
 
-  /**
-   * Filling ANY cell of the draft row turns it into a record: it gets a number,
-   * and a fresh empty draft row appears underneath.
-   */
-  function handleDraftCommit(column: TableColumn, value: string) {
-    if (value === "") return;
-
-    // Id derived from the current count: unique (rows are never removed here)
-    // and pure, unlike Date.now().
-    const created: TableRow = {
-      ...draft,
-      [column.key]: value,
-      [rowIdKey]: "local-" + createdRows.length,
-    };
-    const nextCreated = [...createdRows, created];
-    setCreatedRows(nextCreated);
-    setDraft({});
-    onChangesChange?.(computeChanges(edits, nextCreated));
-  }
-
-  if (allRows.length === 0 && !showNewRecordRow) {
+  if (rows.length === 0) {
     return (
       <p className="rounded-[5px] border border-line bg-elevated px-6.25 py-6 text-base text-ink-700">
         {emptyMessage}
@@ -177,14 +139,17 @@ export function EditableDataTable({
   }
 
   return (
-    // Scrollbar hidden: it used to overlay the last row. Scroll with a trackpad
-    // or shift+wheel.
     // Scrolls in BOTH axes inside itself, which is what makes the sticky header
-    // work: `overflow-x-auto` alone already turns this into a scrollport, so a
+    // work: `overflow-x` alone already turns this into a scrollport, so a
     // `sticky top-0` child anchors here rather than to the page — and with no
     // height limit the container never scrolls vertically, so the header never
     // appeared to stick. Capping the height gives it something to stick to.
-    <div className="max-h-[70vh] w-full overflow-auto rounded-[5px] border border-line scrollbar-none selection:bg-brand selection:text-elevated">
+    //
+    // `overflow-x-scroll`, not `auto`: the horizontal bar is the only sign that
+    // the table has more columns to the right, so it is always there rather
+    // than appearing once the user has already guessed. `scrollbar-table`
+    // makes it a solid, grabbable bar instead of a hairline.
+    <div className="max-h-[70vh] w-full overflow-x-scroll overflow-y-auto rounded-[5px] border border-line selection:bg-brand selection:text-elevated scrollbar-table">
       <div style={{ minWidth: totalWidth }}>
         {/* Header */}
         {/* Sticky header: the labels stay visible down a long table. z-30 so it
@@ -230,88 +195,58 @@ export function EditableDataTable({
         </div>
 
         {/* Records */}
-        {allRows.map((_, rowIndex) => (
-          <div
-            key={rowIds[rowIndex]}
-            className={cn(ROW_HEIGHT, "flex border-b border-line")}
-          >
-            <div
-              style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
-              className="sticky z-10 flex shrink-0 items-center justify-center border-r border-line bg-elevated text-base font-normal text-ink-700 max-md:static"
-            >
-              {rowIndex + 1}
-            </div>
-            {columns.map((column, columnIndex) => (
-              <div
-                key={column.key}
-                style={{
-                  width: widths[columnIndex],
-                  ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
-                }}
-                className={cn(
-                  "shrink-0 border-r border-line bg-elevated last:border-r-0",
-                  columnIndex === 0 && "sticky z-10 max-md:static"
-                )}
-              >
-                <EditableCell
-                  column={column}
-                  value={valueFor(rowIndex, column)}
-                  onCommit={(value) => handleCommit(rowIndex, column, value)}
-                />
-              </div>
-            ))}
-            {rowAction ? (
-              <div
-                style={{ width: actionWidth }}
-                className="flex shrink-0 items-center bg-elevated px-6.25"
-              >
-                {/* Only for records that exist: a draft row has no id yet. */}
-                {rowIndex < rows.length ? rowAction.render(allRows[rowIndex]) : null}
-              </div>
-            ) : null}
-          </div>
-        ))}
+        {rows.map((row, rowIndex) => {
+          const rowId = rowIds[rowIndex];
+          const isPending = pending.has(rowId);
+          const hasError = failed.has(rowId);
 
-        {/* Draft row — fill any cell to create a record. */}
-        {showNewRecordRow ? (
-          <div
-            // Remounting on every creation clears the inputs.
-            key={"draft-" + createdRows.length}
-            className={cn(ROW_HEIGHT, "flex")}
-          >
+          return (
             <div
-              style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
-              className="sticky z-10 flex shrink-0 items-center justify-center border-r border-line bg-elevated text-ink-700 max-md:static"
+              key={rowId}
+              className={cn(ROW_HEIGHT, "flex border-b border-line")}
             >
-              <PlusIcon className="size-4" aria-hidden="true" />
-            </div>
-            {columns.map((column, columnIndex) => (
               <div
-                key={column.key}
-                style={{
-                  width: widths[columnIndex],
-                  ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
-                }}
+                style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
                 className={cn(
-                  "shrink-0 border-r border-line bg-elevated last:border-r-0",
-                  columnIndex === 0 && "sticky z-10 max-md:static"
+                  "sticky z-10 flex shrink-0 items-center justify-center border-r border-line bg-elevated text-base font-normal text-ink-700 max-md:static",
+                  // A thin bar on the row number is the whole status language:
+                  // it never moves the grid and it survives horizontal scroll.
+                  hasError && "border-l-3 border-l-destructive",
+                  !hasError && isPending && "border-l-3 border-l-brand"
                 )}
               >
-                <EditableCell
-                  column={column}
-                  value={draft[column.key] ?? ""}
-                  onCommit={(value) => handleDraftCommit(column, value)}
-                />
+                {rowIndex + 1}
               </div>
-            ))}
-            {rowAction ? (
-              <div
-                style={{ width: actionWidth }}
-                className="shrink-0 bg-elevated"
-              />
-            ) : null}
-          </div>
-        ) : null}
+              {columns.map((column, columnIndex) => (
+                <div
+                  key={column.key}
+                  style={{
+                    width: widths[columnIndex],
+                    ...(columnIndex === 0 ? { left: INDEX_COLUMN_WIDTH } : {}),
+                  }}
+                  className={cn(
+                    "shrink-0 border-r border-line bg-elevated last:border-r-0",
+                    columnIndex === 0 && "sticky z-10 max-md:static"
+                  )}
+                >
+                  <EditableCell
+                    column={column}
+                    value={valueFor(rowIndex, column)}
+                    onCommit={(value) => handleCommit(rowIndex, column, value)}
+                  />
+                </div>
+              ))}
+              {rowAction ? (
+                <div
+                  style={{ width: actionWidth }}
+                  className="flex shrink-0 items-center bg-elevated px-6.25"
+                >
+                  {rowAction.render(row)}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

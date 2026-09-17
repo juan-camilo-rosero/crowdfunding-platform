@@ -94,10 +94,13 @@ export function FilterDropdown({
         <ChevronDownIcon className="size-4 shrink-0" aria-hidden="true" />
       </DropdownMenuTrigger>
 
-      {/* Roomier on desktop: larger text and more padding per option. */}
+      {/* Roomier on desktop: larger text and more padding per option.
+          Capped in height and scrollable: a reference filter (a project, an
+          investor) lists every record, and an uncapped menu ran past the
+          bottom of the screen with no way to reach the last entries. */}
       <DropdownMenuContent
         align="start"
-        className="bg-stone-50 md:min-w-56 md:p-1.5"
+        className="max-h-80 overflow-y-auto bg-stone-50 md:min-w-56 md:p-1.5"
       >
         <DropdownMenuItem
           className="md:px-3 md:py-2 md:text-base"

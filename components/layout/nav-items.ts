@@ -1,4 +1,5 @@
 import {
+  BellIcon,
   CreditCardIcon,
   DatabaseIcon,
   FileTextIcon,
@@ -57,5 +58,6 @@ export const CATALOG_NAV_ITEM: NavItem = {
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: es.nav.adminPanel, icon: DatabaseIcon, exact: true },
   { href: "/admin/usuarios", label: es.nav.users, icon: UsersIcon },
+  { href: "/admin/notificaciones", label: es.nav.notifications, icon: BellIcon },
   { href: "/admin/pipeline", label: es.nav.salesFunnel, icon: FilterIcon },
 ];

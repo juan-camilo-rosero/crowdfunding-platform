@@ -338,36 +338,36 @@ export type Database = {
           comments: string | null
           created_at: string
           id: string
-          investment_type_pref: string | null
+          investment_type_pref: string
           phone: string | null
-          project_id: string | null
-          status: string | null
+          project_id: string
+          status: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           amount?: number | null
           comments?: string | null
           created_at?: string
           id?: string
-          investment_type_pref?: string | null
+          investment_type_pref: string
           phone?: string | null
-          project_id?: string | null
-          status?: string | null
+          project_id: string
+          status: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           amount?: number | null
           comments?: string | null
           created_at?: string
           id?: string
-          investment_type_pref?: string | null
+          investment_type_pref?: string
           phone?: string | null
-          project_id?: string | null
-          status?: string | null
+          project_id?: string
+          status?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: [
           {
@@ -538,6 +538,44 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          data: Json
+          id: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          data?: Json
+          id?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -625,39 +663,77 @@ export type Database = {
         }
         Relationships: []
       }
+      push_tokens: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          id: string
+          last_seen_at: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reassignment_requests: {
         Row: {
-          amount: number | null
-          from_project_id: string | null
+          amount: number
+          from_project_id: string
           id: string
-          investor_id: string | null
+          investor_id: string
           requested_at: string
           resolved_at: string | null
           resolved_by: string | null
-          status: string | null
-          to_project_id: string | null
+          status: string
+          to_project_id: string
         }
         Insert: {
-          amount?: number | null
-          from_project_id?: string | null
+          amount: number
+          from_project_id: string
           id?: string
-          investor_id?: string | null
+          investor_id: string
           requested_at?: string
           resolved_at?: string | null
           resolved_by?: string | null
-          status?: string | null
-          to_project_id?: string | null
+          status: string
+          to_project_id: string
         }
         Update: {
-          amount?: number | null
-          from_project_id?: string | null
+          amount?: number
+          from_project_id?: string
           id?: string
-          investor_id?: string | null
+          investor_id?: string
           requested_at?: string
           resolved_at?: string | null
           resolved_by?: string | null
-          status?: string | null
-          to_project_id?: string | null
+          status?: string
+          to_project_id?: string
         }
         Relationships: [
           {

@@ -617,6 +617,70 @@ export const es = {
     },
   },
 
+  // Admin action: send a push notification to investors. The wording avoids
+  // promising delivery — the panel writes the notification, the Edge Function
+  // pushes it, and a phone with the app uninstalled receives nothing.
+  adminNotifications: {
+    title: "Notificaciones",
+    subtitle:
+      "Envía un aviso a los inversionistas. Les llega al celular si tienen la app instalada, y queda en su listado de notificaciones.",
+
+    titleLabel: "Título",
+    titlePlaceholder: "Nuevo reporte de avance",
+    bodyLabel: "Mensaje",
+    bodyPlaceholder: "Cuéntales en una o dos líneas qué pasó.",
+    // {n} is replaced with the characters left in the field.
+    charactersLeft: "{n} caracteres restantes",
+
+    audienceLabel: "Destinatarios",
+    audienceAll: "Todos los inversionistas",
+    audienceSelected: "Elegir inversionistas",
+    // {n} is replaced with the number of linked investors.
+    audienceAllCount: "{n} inversionistas vinculados",
+    audienceAllCountOne: "1 inversionista vinculado",
+    searchPlaceholder: "Busca por nombre o correo",
+    selectedCount: "{n} seleccionados",
+    selectedCountOne: "1 seleccionado",
+    selectAll: "Seleccionar todos",
+    clearSelection: "Quitar selección",
+    noName: "Sin nombre",
+
+    send: "Enviar notificación",
+    sending: "Enviando…",
+
+    confirmTitle: "Enviar notificación",
+    confirmDescription:
+      "Se enviará ahora mismo y no se puede deshacer. Revisa el texto antes de confirmar.",
+    // {n} is replaced with the number of recipients.
+    confirmRecipients: "Destinatarios: {n} inversionistas",
+    confirmRecipientsOne: "Destinatarios: 1 inversionista",
+    // {n} is replaced with the number of notifications created.
+    success: "Notificación enviada a {n} inversionistas.",
+    successOne: "Notificación enviada a 1 inversionista.",
+
+    empty: "Todavía no hay inversionistas vinculados",
+    emptyHint:
+      "Vincula a alguien como inversionista en Usuarios y podrás enviarle notificaciones.",
+    emptySearch: "Ningún inversionista coincide",
+    emptySearchHint: "Prueba con otro nombre o correo.",
+
+    loadError: "No pudimos cargar los inversionistas.",
+    retry: "Reintentar",
+
+    errors: {
+      notAdmin: "No tienes permiso para enviar notificaciones.",
+      titleRequired: "Escribe un título.",
+      titleTooLong: "El título no puede pasar de 80 caracteres.",
+      bodyRequired: "Escribe el mensaje.",
+      bodyTooLong: "El mensaje no puede pasar de 300 caracteres.",
+      noRecipients: "Elige al menos un inversionista.",
+      // The chosen people no longer resolve to anyone linked.
+      recipientsGone:
+        "Ninguno de los destinatarios elegidos sigue vinculado como inversionista.",
+      sendFailed: "No pudimos enviar la notificación. Inténtalo de nuevo.",
+    },
+  },
+
   // Investment onboarding: identity verification + contract signature. It is
   // NOT the basic onboarding (that one is `onboarding` above); this happens
   // after an admin links the person as an investor. See user-management.md.
@@ -775,6 +839,17 @@ export const es = {
     noPhotos: "Este proyecto aún no tiene fotos publicadas",
     // Subtitle under the title. {status} and {progress} are filled at render.
     statusWithProgress: "{status} - avance del {progress}%",
+
+    // Controles que solo ve un administrador sobre la galería del proyecto.
+    admin: {
+      badge: "Modo administrador",
+      editInfo: "Editar información",
+      editPhotos: "Editar fotos",
+      editTitle: "Editar proyecto",
+      editDescription:
+        "Cambia los datos que ven los inversionistas en el catálogo y en esta página. Se guarda al confirmar.",
+      save: "Guardar cambios",
+    },
 
     tabs: {
       // Names the tab group for assistive tech, not shown on screen.
@@ -991,6 +1066,7 @@ export const es = {
     tasks: "Tareas",
     reports: "Reportes",
     users: "Usuarios",
+    notifications: "Notificaciones",
     pipeline: "Pipeline",
     approvals: "Aprobaciones",
   },
@@ -1003,14 +1079,56 @@ export const es = {
     title: "Panel de administrador",
     saveChanges: "Guardar cambios",
     saving: "Guardando…",
-    unsavedNotice: "Tienes cambios sin guardar",
-    saveSuccess: "Cambios guardados",
     saveError: "No pudimos guardar los cambios. No se aplicó ninguno.",
     notAuthorized: "No tienes permiso para guardar cambios.",
     loadError: "No pudimos cargar esta tabla.",
     emptyTable: "Esta tabla todavía no tiene registros.",
+    emptyFiltered: "Ningún registro coincide con los filtros.",
+    // Leído por lectores de pantalla cuando una celda no tiene valor.
+    emptyValue: "vacío",
+
+    // Autoguardado: cada celda se guarda sola, sin botón de por medio.
+    autosaveHint: "Los cambios se guardan automáticamente.",
+    autosaveSaved: "Todos los cambios están guardados",
+    retry: "Reintentar",
+    // Solo aparece cuando el guardado automático FALLÓ y la persona intenta
+    // salir: en el resto de los casos no hay nada pendiente que perder.
     discardConfirm:
-      "Tienes cambios sin guardar. Si continúas se perderán. ¿Quieres salir de todos modos?",
+      "No pudimos guardar unos cambios y se perderán si sales. ¿Quieres salir de todos modos?",
+
+    // Creación de registros mediante formulario.
+    newRecord: "Nuevo registro",
+    // {tabla} se reemplaza con el nombre de la tabla activa.
+    newRecordIn: "Nuevo registro en {tabla}",
+    newRecordHint:
+      "Completa los campos y guarda. Los marcados con * son obligatorios.",
+    createRecord: "Crear registro",
+    creating: "Creando…",
+
+    // Edición de un registro completo, sin recorrer la fila celda por celda.
+    actionsColumn: "Acciones",
+    editRecord: "Editar",
+    editRecordTitle: "Editar registro",
+    editRecordHint:
+      "Cambia los campos que necesites. Se guarda al confirmar.",
+
+    form: {
+      selectPlaceholder: "Selecciona una opción",
+      selectClear: "Sin valor",
+      booleanHint: "Sí",
+    },
+
+    filters: {
+      // {campo} se reemplaza con el nombre de la columna.
+      by: "Filtrar por {campo}",
+      all: "Todos: {campo}",
+      clear: "Limpiar filtros",
+      // {n} se reemplaza con la cantidad de registros listados.
+      count: "{n} registros",
+      countOne: "1 registro",
+      // {n} listados de {total} en total, cuando la tabla supera el límite.
+      countLimited: "Mostrando {n} de {total} registros",
+    },
 
     photos: {
       // Column header and per-row trigger in the projects table.
@@ -1033,6 +1151,8 @@ export const es = {
       coverBadge: "Portada",
       hint: "Formatos: JPG, PNG, WebP o AVIF. Máximo 30 MB por imagen.",
       close: "Listo",
+      // {n} de {total} mientras se suben varias imágenes.
+      progress: "Subiendo imagen {n} de {total}…",
 
       errors: {
         notAdmin: "No tienes permiso para cambiar las fotos.",
@@ -1043,6 +1163,16 @@ export const es = {
         photoNotFound: "Esa imagen ya no está en el proyecto.",
         uploadFailed: "No pudimos subir la imagen. Inténtalo de nuevo.",
         saveFailed: "No pudimos guardar los cambios. Inténtalo de nuevo.",
+        // Mensajes que nombran el archivo: con varias imágenes seleccionadas,
+        // saber cuál falló es la diferencia entre poder arreglarlo o no.
+        badTypeNamed:
+          "«{archivo}» no es un formato válido. Usa JPG, PNG, WebP o AVIF.",
+        tooLargeNamed: "«{archivo}» supera los 30 MB. Usa una versión más liviana.",
+        emptyNamed: "«{archivo}» está vacío y no se puede subir.",
+        uploadFailedNamed:
+          "No pudimos subir «{archivo}». Revisa tu conexión e inténtalo de nuevo; las imágenes anteriores sí se guardaron.",
+        unexpected:
+          "Algo falló y no pudimos completar la acción. Vuelve a intentarlo; si sigue pasando, recarga la página.",
       },
     },
   },
