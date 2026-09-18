@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format";
 import { DOCUMENTS_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import { getCurrentUserProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { describeDocument } from "@/lib/documents/display";
 import { parseDocumentFilters } from "@/lib/documents/params";
 import {
   fetchDocumentFilterOptions,
@@ -16,18 +17,22 @@ import type { TableColumn, TableRow } from "@/lib/table/types";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
+import { TableCellStack } from "@/components/tables/TableCellStack";
 import { DocumentFilters } from "./DocumentFilters";
 import { DownloadButton } from "./DownloadButton";
 
 /**
- * Columns in the order the spec sets: Tipo · Proyecto · Fecha · Descargar.
- * No status column.
+ * Columns: Documento · Proyecto · Fecha · Descargar. No status column.
+ *
+ * The first one is two lines — the document's name with its type beneath (see
+ * describeDocument). views.md lists the NAME among what this screen shows, and
+ * until now it only travelled as the download's file name.
  *
  * The last one is `type: "action"` — it holds a control, not a value, and its
  * content always comes from renderCell.
  */
 const COLUMNS: TableColumn[] = [
-  { key: "docType", label: es.documents.columns.docType, type: "select", width: 220 },
+  { key: "docType", label: es.documents.columns.document, type: "text", width: 280 },
   { key: "projectName", label: es.documents.columns.project, type: "project", width: 240 },
   { key: "date", label: es.documents.columns.date, type: "date" },
   { key: "download", label: es.documents.columns.download, type: "action", width: 170 },
@@ -120,13 +125,21 @@ export default async function DocumentsPage({
             caption={es.documents.tableCaption}
             columns={COLUMNS}
             rows={rows}
-            // What the row IS: the kind of document. The project and the date
-            // qualify it.
+            // What the row IS: the document. The project and the date qualify
+            // it. (The stack sets its own weights; this marks the column.)
             emphasizeColumn="docType"
             renderCell={(row, column) => {
               if (column.key === "docType") {
-                const type = row.docType ? String(row.docType) : null;
-                return type ? (es.documents.type[type] ?? type) : "";
+                const { primary, secondary } = describeDocument({
+                  name: row.name as string | null,
+                  docType: row.docType as string | null,
+                });
+                // Nothing on either line: "" lets the table show its dash.
+                return primary ? (
+                  <TableCellStack primary={primary} secondary={secondary} />
+                ) : (
+                  ""
+                );
               }
               if (column.key === "date") {
                 return row.date ? formatDate(String(row.date)) : "";

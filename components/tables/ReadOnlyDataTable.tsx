@@ -118,7 +118,10 @@ export function ReadOnlyDataTable({
                   <td
                     key={column.key}
                     className={cn(
-                      "px-6.25 py-4 align-middle text-base text-ink-700",
+                      // 14px: a one-line row lands at 52px and a two-line
+                      // one (TableCellStack) at 66px — airy without letting
+                      // the stacked tables turn into a column of tall cards.
+                      "px-6.25 py-3.5 align-middle text-base text-ink-700",
                       getColumnTypeMeta(column.type).align === "right" &&
                         "text-right",
                       column.key === emphasizeColumn &&

@@ -104,6 +104,13 @@ Esta mecánica es igual en las nueve tablas. Se aprende una vez.
 
 Si algo falla, el mensaje aparece debajo de la tabla, la fila queda marcada en rojo, **tu texto se queda en pantalla** y tienes un botón **Reintentar**.
 
+### La primera columna tiene dos líneas
+
+En **Proyectos** y en **Inversionistas** (también en el embudo de ventas), la primera columna muestra el nombre y, debajo, lo que lo distingue: la ciudad y el tipo del proyecto, o el correo del inversionista. Esa columna queda fija al desplazarte hacia la derecha, así siempre sabes en qué registro estás.
+
+- Al editarla, solo se edita el **nombre**; la línea de abajo sigue visible mientras escribes.
+- La línea de abajo no se edita ahí: sale de las columnas Ciudad, Tipo o Correo, y se actualiza sola en cuanto cambias alguna de ellas.
+
 ### Editar la fila completa
 
 Cada fila tiene un botón **Editar** a la derecha. Abre un formulario con todos los campos del registro, con sus nombres y su tipo, sin tener que recorrer la fila de izquierda a derecha. Es la forma cómoda de corregir varias cosas a la vez.

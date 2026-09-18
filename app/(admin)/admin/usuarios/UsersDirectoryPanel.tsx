@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { FilterDropdown } from "@/components/filters/FilterDropdown";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
+import { TableCellStack } from "@/components/tables/TableCellStack";
 import { convertVisitorToInvestor } from "./actions";
 import { sendContractForSignature } from "./contract-actions";
 
@@ -27,9 +28,17 @@ export type UsersDirectoryPanelProps = {
   users: UserDirectoryEntry[];
 };
 
+/**
+ * The person is ONE column of two lines — name, and the email beneath it.
+ *
+ * They were two columns, which spent the table's width saying one thing: who
+ * this is. The email is also what tells apart two people with the same name
+ * (it is the identity the whole linking flow relies on), so it belongs right
+ * under the name rather than a column away. The width it frees goes to the
+ * state badges and the action, which were the ones wrapping.
+ */
 const COLUMNS: TableColumn[] = [
-  { key: "fullName", label: es.adminUsers.columns.name, type: "text", width: 240 },
-  { key: "email", label: es.adminUsers.columns.email, type: "email", width: 240 },
+  { key: "fullName", label: es.adminUsers.columns.user, type: "text", width: 300 },
   { key: "state", label: es.adminUsers.columns.state, type: "select", width: 210 },
   { key: "createdAt", label: es.adminUsers.columns.registered, type: "date" },
   { key: "action", label: es.adminUsers.columns.action, type: "action", width: 230 },
@@ -186,10 +195,15 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
           const user = row as unknown as UserDirectoryEntry;
 
           if (column.key === "fullName") {
+            const name = user.fullName?.trim();
             return (
-              <span className={user.fullName ? "" : "text-ink-400"}>
-                {user.fullName ?? es.adminUsers.noName}
-              </span>
+              <TableCellStack
+                // No name yet (onboarding not finished): say so in the muted
+                // ink, so it never reads as though that were their name.
+                primary={name || es.adminUsers.noName}
+                primaryMuted={!name}
+                secondary={user.email}
+              />
             );
           }
 

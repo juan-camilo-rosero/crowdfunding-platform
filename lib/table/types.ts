@@ -41,6 +41,17 @@ export type TableColumn = {
    * approvals flow so the reassignment transaction gets created).
    */
   readOnly?: boolean;
+  /**
+   * Other fields of the record shown UNDER this column's value, in the grid:
+   * `["city", "type"]` on a project's name reads "Rotonda · casa".
+   *
+   * Only for the column that identifies the record — it is the frozen first
+   * column, the one still on screen after scrolling sideways, so it is the one
+   * that has to carry enough to tell two similar records apart. Presentation
+   * only: the fields stay editable in their own columns, and nothing here is
+   * sent to the server or validated.
+   */
+  subtitle?: readonly string[];
 };
 
 /** One record. Keys match `TableColumn.key`. */

@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { es } from "@/i18n";
 import { formatDate } from "@/lib/format";
+import { describeDocument } from "@/lib/documents/display";
 import { DOCUMENT_TYPES } from "@/lib/documents/types";
 import type { TableColumn, TableRow } from "@/lib/table/types";
 import { ReadOnlyDataTable } from "./ReadOnlyDataTable";
+import { TableCellStack } from "./TableCellStack";
 
 /**
  * The documents table is ReadOnlyDataTable with the screen's columns and cell
@@ -13,7 +15,7 @@ import { ReadOnlyDataTable } from "./ReadOnlyDataTable";
  */
 
 const COLUMNS: TableColumn[] = [
-  { key: "docType", label: es.documents.columns.docType, type: "select" },
+  { key: "docType", label: es.documents.columns.document, type: "text" },
   { key: "projectName", label: es.documents.columns.project, type: "text" },
   { key: "date", label: es.documents.columns.date, type: "date" },
   { key: "download", label: es.documents.columns.download, type: "action" },
@@ -27,8 +29,11 @@ const ROWS: TableRow[] = [
 /** Mirrors the page's renderCell, minus the client-only button. */
 const renderCell = (row: TableRow, column: TableColumn) => {
   if (column.key === "docType") {
-    const type = row.docType ? String(row.docType) : null;
-    return type ? (es.documents.type[type] ?? type) : "";
+    const { primary, secondary } = describeDocument({
+      name: row.name as string | null,
+      docType: row.docType as string | null,
+    });
+    return primary ? <TableCellStack primary={primary} secondary={secondary} /> : "";
   }
   if (column.key === "date") {
     return row.date ? formatDate(String(row.date)) : "";
@@ -50,12 +55,40 @@ const renderTable = (rows = ROWS) =>
     />
   );
 
+describe("documents table — the two-line document cell", () => {
+  it("leads with the file's name and puts its type underneath", () => {
+    renderTable([
+      { id: "d3", docType: "planos", projectName: "Villa Rotonda 118", date: null, name: "Planos fachada norte" },
+    ]);
+
+    const cell = screen.getByText("Planos fachada norte").closest("td")!;
+    expect(cell).toHaveTextContent("Planos fachada norte");
+    expect(cell).toHaveTextContent(es.documents.type["planos"]);
+  });
+
+  it("falls back to the type alone when the document has no name", () => {
+    renderTable([
+      { id: "d4", docType: "deed", projectName: "Villa Rotonda 118", date: null, name: "" },
+    ]);
+
+    expect(screen.getByText("Escritura")).toBeInTheDocument();
+  });
+
+  it("shows a dash, not an empty cell, with neither a name nor a type", () => {
+    renderTable([
+      { id: "d5", docType: null, projectName: "Villa Rotonda 118", date: "2026-01-05", name: null },
+    ]);
+
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+});
+
 describe("documents table — headers and mapping", () => {
   it("renders the four headers in order", () => {
     renderTable();
 
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
-      "Tipo de documento",
+      "Documento",
       "Nombre del proyecto",
       "Fecha",
       "Descargar",

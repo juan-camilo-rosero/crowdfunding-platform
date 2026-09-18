@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { resolveColumnWidth } from "@/lib/table/format-cell";
+import { buildSubtitle } from "@/lib/table/subtitle";
 import type { TableColumn, TableRow } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
 import { EditableCell } from "./EditableCell";
@@ -9,6 +10,12 @@ import { DataTableHeaderCell } from "./DataTableHeaderCell";
 
 const HEADER_HEIGHT = "h-9.75";
 const ROW_HEIGHT = "h-10.25";
+/**
+ * Row height when a column carries a second line. EVERY row takes it, not only
+ * the ones whose detail happens to be filled in: rows of two heights in one
+ * grid read as a rendering fault, and the sticky columns would stop lining up.
+ */
+const STACKED_ROW_HEIGHT = "h-14";
 /** Width of the leading row-number column, in px. */
 const INDEX_COLUMN_WIDTH = 52;
 
@@ -110,12 +117,27 @@ export function EditableDataTable({
   );
 
   const pending = useMemo(() => new Set(pendingRowIds ?? []), [pendingRowIds]);
+
+  const isStacked = useMemo(
+    () => columns.some((column) => (column.subtitle?.length ?? 0) > 0),
+    [columns]
+  );
+  const rowHeight = isStacked ? STACKED_ROW_HEIGHT : ROW_HEIGHT;
   const failed = useMemo(() => new Set(errorRowIds ?? []), [errorRowIds]);
 
-  function valueFor(rowIndex: number, column: TableColumn) {
+  /**
+   * The value ON SCREEN for a field: the local edit when there is one, the
+   * server's otherwise. By key rather than by column, because a subtitle can
+   * name a field the table does not show — which simply never has an edit.
+   */
+  function valueForKey(rowIndex: number, key: string) {
     const rowId = rowIds[rowIndex];
-    const edited = edits[rowId]?.[column.key];
-    return edited !== undefined ? edited : rows[rowIndex][column.key];
+    const edited = edits[rowId]?.[key];
+    return edited !== undefined ? edited : rows[rowIndex][key];
+  }
+
+  function valueFor(rowIndex: number, column: TableColumn) {
+    return valueForKey(rowIndex, column.key);
   }
 
   function handleCommit(rowIndex: number, column: TableColumn, value: string) {
@@ -203,7 +225,7 @@ export function EditableDataTable({
           return (
             <div
               key={rowId}
-              className={cn(ROW_HEIGHT, "flex border-b border-line")}
+              className={cn(rowHeight, "flex border-b border-line")}
             >
               <div
                 style={{ width: INDEX_COLUMN_WIDTH, left: 0 }}
@@ -235,6 +257,14 @@ export function EditableDataTable({
                     // The frozen first column is the record's name; it carries
                     // the row the way the header carries the table.
                     emphasized={columnIndex === 0}
+                    // Read through valueFor, so the line under a project's name
+                    // follows an edit to its city before the server confirms it.
+                    subtitle={buildSubtitle(
+                      // A column naming itself would print its value twice.
+                      column.subtitle?.filter((key) => key !== column.key),
+                      (key) => valueForKey(rowIndex, key),
+                      columns
+                    )}
                     onCommit={(value) => handleCommit(rowIndex, column, value)}
                   />
                 </div>

@@ -349,6 +349,8 @@ export const es = {
 
     columns: {
       docType: "Tipo de documento",
+      // Columna de dos líneas: nombre del archivo y, debajo, su tipo.
+      document: "Documento",
       project: "Nombre del proyecto",
       date: "Fecha",
       download: "Descargar",
@@ -516,6 +518,8 @@ export const es = {
     columns: {
       name: "Nombre",
       email: "Correo",
+      // Columna de dos líneas: nombre y, debajo, el correo.
+      user: "Usuario",
       state: "Estado",
       registered: "Registrado",
       action: "Acción",

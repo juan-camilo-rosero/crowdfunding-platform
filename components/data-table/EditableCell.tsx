@@ -7,6 +7,7 @@ import { getColumnTypeMeta } from "@/lib/table/column-types";
 import { formatCellValue, toEditableValue } from "@/lib/table/format-cell";
 import type { TableColumn } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
+import { TableCellStack } from "@/components/tables/TableCellStack";
 import { SelectCell } from "./SelectCell";
 
 export type EditableCellProps = {
@@ -22,6 +23,14 @@ export type EditableCellProps = {
    * find which row it is on after scrolling sideways.
    */
   emphasized?: boolean;
+  /**
+   * Second line under the value, already built from the record's other fields
+   * (see buildSubtitle). Only honoured when the column declares a `subtitle`,
+   * and only for text-like columns: a pill or a checkbox has no "line" to put
+   * it under. An empty string still makes the cell two-line-capable — it just
+   * shows the one line there is, centred in the taller row.
+   */
+  subtitle?: string;
 };
 
 /**
@@ -48,6 +57,7 @@ export function EditableCell({
   onCommit,
   readOnly = false,
   emphasized = false,
+  subtitle = "",
 }: EditableCellProps) {
   const meta = getColumnTypeMeta(column.type);
   const [isEditing, setIsEditing] = useState(false);
@@ -62,6 +72,17 @@ export function EditableCell({
   }, [isEditing]);
 
   const isLocked = readOnly || column.readOnly === true;
+
+  /**
+   * Two lines: the value with the record's distinguishing detail beneath.
+   * Textareas and checkboxes are excluded on purpose — the first opens as an
+   * overlay and the second is a box, and neither has a line to sit above
+   * another one.
+   */
+  const isStacked =
+    !!column.subtitle?.length &&
+    meta.input !== "textarea" &&
+    meta.input !== "checkbox";
 
   // Select columns get their own always-interactive control.
   if (meta.input === "select") {
@@ -118,7 +139,18 @@ export function EditableCell({
           meta.align === "right" && "justify-end"
         )}
       >
-        <span className="min-w-0 truncate">{text}</span>
+        {isStacked ? (
+          <TableCellStack
+            className="flex-1"
+            // An empty name would leave the first line blank with the detail
+            // floating under nothing; a dash says the value is missing.
+            primary={text || "—"}
+            primaryMuted={!text}
+            secondary={subtitle}
+          />
+        ) : (
+          <span className="min-w-0 truncate">{text}</span>
+        )}
 
         {/*
           The affordance, and a real control: it appears on hover or keyboard
@@ -186,6 +218,37 @@ export function EditableCell({
             "leading-snug text-ink-700 shadow-lg outline-none"
           )}
         />
+      </div>
+    );
+  }
+
+  if (isStacked) {
+    return (
+      // Editing a two-line cell edits the FIRST line only. The detail stays in
+      // view underneath, so the admin still sees which record this is while
+      // the name is half typed — the whole reason the second line exists. The
+      // field gets a visible outline because, unlike a one-line cell, it no
+      // longer fills the cell and would otherwise not read as a field at all.
+      <div className="flex h-full min-w-0 flex-col justify-center gap-0.5 px-6.25">
+        <input
+          ref={inputRef as React.Ref<HTMLInputElement>}
+          type={meta.input}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          aria-label={column.label}
+          className={cn(
+            "-mx-1.5 h-6 min-w-0 rounded-[5px] bg-elevated px-1.5 text-base leading-5 font-medium text-ink-900",
+            "ring-1 ring-brand outline-none",
+            meta.align === "right" && "text-right"
+          )}
+        />
+        {subtitle ? (
+          <span className="truncate text-sm leading-[18px] text-ink-500">
+            {subtitle}
+          </span>
+        ) : null}
       </div>
     );
   }

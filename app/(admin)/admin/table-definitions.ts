@@ -36,7 +36,16 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Proyectos",
     source: "projects",
     columns: [
-      { key: "name", label: "Nombre", type: "text", width: 220, required: true },
+      // Under the name, where and what it is: two lots on the same street
+      // are told apart without leaving the frozen column.
+      {
+        key: "name",
+        label: "Nombre",
+        type: "text",
+        width: 240,
+        required: true,
+        subtitle: ["city", "type"],
+      },
       {
         key: "company",
         label: "Compañía",
@@ -89,7 +98,18 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     label: "Inversionistas",
     source: "investors",
     columns: [
-      { key: "full_name", label: "Nombre completo", type: "text", width: 220, required: true },
+      // The email under the name: two people can share a name, never an email
+      // — it is the identity the whole linking flow relies on. The sales
+      // funnel reuses this column, and its rows carry the email even though
+      // its table does not show that column.
+      {
+        key: "full_name",
+        label: "Nombre completo",
+        type: "text",
+        width: 260,
+        required: true,
+        subtitle: ["email"],
+      },
       { key: "document_id", label: "Cédula", type: "text" },
       { key: "phone", label: "Teléfono", type: "phone", width: 220 },
       { key: "email", label: "Correo", type: "email" },

@@ -123,12 +123,31 @@ describe("the directory", () => {
     renderPanel();
 
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
-      "Nombre",
-      "Correo",
+      "Usuario",
       "Estado",
       "Registrado",
       "Acción",
     ]);
+  });
+
+  it("shows the email UNDER the name, in the same cell", () => {
+    renderPanel();
+
+    const cell = screen.getByText("Ana Pérez").closest("td")!;
+    expect(within(cell).getByText("ana@ejemplo.com")).toBeInTheDocument();
+  });
+
+  it("keeps the email visible for someone with no name yet", () => {
+    renderPanel([entry({ id: "u9", fullName: null, email: "nuevo@ejemplo.com" })]);
+
+    const cell = screen.getByText(es.adminUsers.noName).closest("td")!;
+    expect(within(cell).getByText("nuevo@ejemplo.com")).toBeInTheDocument();
+  });
+
+  it("treats a name of only spaces as no name", () => {
+    renderPanel([entry({ id: "u9", fullName: "   " })]);
+
+    expect(screen.getByText(es.adminUsers.noName)).toBeInTheDocument();
   });
 
   it("lists everyone, not only the people pending conversion", () => {
