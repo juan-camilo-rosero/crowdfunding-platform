@@ -1,35 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  MAX_PHOTO_BYTES,
   PROJECT_PHOTOS_BUCKET,
   buildPhotoPath,
   isAcceptedImage,
   photoPathFromUrl,
-  rejectPhotoFile,
 } from "./photos";
-
-describe("rejectPhotoFile", () => {
-  it("accepts an image of an allowed type and size", () => {
-    expect(rejectPhotoFile({ type: "image/jpeg", size: 1024 })).toBeNull();
-  });
-
-  it("names the reason so the message can be specific", () => {
-    expect(rejectPhotoFile({ type: "application/pdf", size: 1024 })).toBe("type");
-    expect(
-      rejectPhotoFile({ type: "image/jpeg", size: MAX_PHOTO_BYTES + 1 })
-    ).toBe("size");
-    expect(rejectPhotoFile({ type: "image/jpeg", size: 0 })).toBe("empty");
-  });
-
-  it("checks the file BEFORE anything is uploaded, so an empty file is caught first", () => {
-    // An empty file of a forbidden type is empty: nothing left to upload.
-    expect(rejectPhotoFile({ type: "text/plain", size: 0 })).toBe("empty");
-  });
-
-  it("allows exactly the ceiling, not one byte more", () => {
-    expect(rejectPhotoFile({ type: "image/webp", size: MAX_PHOTO_BYTES })).toBeNull();
-  });
-});
 
 describe("isAcceptedImage", () => {
   it("matches the bucket's own list", () => {

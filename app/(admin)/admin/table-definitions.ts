@@ -81,13 +81,16 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
       { key: "deadline", label: "Fecha límite", type: "date" },
       { key: "in_fundraising", label: "En captación", type: "boolean" },
       { key: "fundraising_goal", label: "Meta de captación", type: "currency" },
-      // Public marketing return shown in the catalogue. NOT the per-investor
-      // agreed return, which lives in capital_contributions.
+      // Public return offered by the project, STRUCTURED: it feeds the
+      // catalogue label and the calculator on the project page. NOT the
+      // per-investor agreed return, which lives in capital_contributions and
+      // stays free text. The old free text (`offered_return`) is shown muted
+      // while no offer is configured, and retired when one is saved.
       {
-        key: "offered_return",
+        key: "return_offer",
         label: "Retorno ofrecido",
-        type: "text",
-        width: 200,
+        type: "returnOffer",
+        fallback: "offered_return",
       },
       { key: "description", label: "Descripción", type: "longText" },
       { key: "drive_folder_url", label: "Carpeta Drive", type: "url" },

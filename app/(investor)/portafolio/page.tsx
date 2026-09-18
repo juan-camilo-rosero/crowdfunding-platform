@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 // Feather icons (lucide-react is the maintained fork): folder, search.
 import { FolderIcon, SearchIcon } from "lucide-react";
 import { es } from "@/i18n";
+import { returnOfferLabel } from "@/lib/projects/return-offer";
 import { CATALOG_ROUTE, LOGIN_ROUTE } from "@/lib/auth/routes";
 import {
   getCurrentUserProfile,
@@ -57,7 +58,7 @@ export default async function CatalogPage({
   let query = supabase
     .from("projects")
     .select(
-      "id, name, type, city, status, progress, in_fundraising, fundraising_goal, capital_required, offered_return, main_photos"
+      "id, name, type, city, status, progress, in_fundraising, fundraising_goal, capital_required, offered_return, return_offer, main_photos"
     )
     .limit(CATALOG_LIMIT);
 
@@ -178,7 +179,12 @@ export default async function CatalogPage({
                     project,
                     raisedByProject.get(project.id) ?? 0
                   )}
-                  offeredReturn={project.offered_return}
+                  // The structured offer's label; the legacy text only while
+                  // no offer is configured.
+                  offeredReturn={returnOfferLabel(
+                    project.return_offer,
+                    project.offered_return
+                  )}
                   isInvested={investedProjectIds.has(project.id)}
                 />
               </div>

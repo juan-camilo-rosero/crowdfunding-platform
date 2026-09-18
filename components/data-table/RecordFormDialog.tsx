@@ -14,7 +14,7 @@ import {
 } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ValuePill } from "./SelectCell";
+import {
+  draftToOffer,
+  offerToDraft,
+  parseReturnOffer,
+  serializeReturnOffer,
+  type ReturnOfferDraft,
+} from "@/lib/projects/return-offer";
+import { ReturnOfferEditor } from "@/components/project/ReturnOfferEditor";
 
 export type RecordFormDialogProps = {
   open: boolean;
@@ -102,6 +110,24 @@ export function RecordFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
+  /**
+   * Problems a structured field knows about before the server does — an offer
+   * whose maximum is below its minimum. The field reports them; the submit
+   * refuses while any is set, so an invalid value never makes the round trip.
+   */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  function setFieldError(key: string, message: string | null) {
+    setFieldErrors((current) => {
+      if (!message) {
+        if (!(key in current)) return current;
+        const next = { ...current };
+        delete next[key];
+        return next;
+      }
+      return current[key] === message ? current : { ...current, [key]: message };
+    });
+  }
 
   function setValue(key: string, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
@@ -147,6 +173,14 @@ export function RecordFormDialog({
         );
         return;
       }
+    }
+
+    const fieldError = editable
+      .map((column) => fieldErrors[column.key])
+      .find(Boolean);
+    if (fieldError) {
+      setError(fieldError);
+      return;
     }
 
     const body = payload();
@@ -206,6 +240,7 @@ export function RecordFormDialog({
                 column={column}
                 value={values[column.key] ?? ""}
                 onChange={(value) => setValue(column.key, value)}
+                onError={(message) => setFieldError(column.key, message)}
                 invalid={missing.includes(column.key)}
                 showRequired={mode === "create"}
               />
@@ -249,6 +284,8 @@ type RecordFieldProps = {
   column: TableColumn;
   value: string;
   onChange: (value: string) => void;
+  /** A structured field reports whether its current input is usable. */
+  onError: (message: string | null) => void;
   invalid: boolean;
   showRequired: boolean;
 };
@@ -258,12 +295,24 @@ function RecordField({
   column,
   value,
   onChange,
+  onError,
   invalid,
   showRequired,
 }: RecordFieldProps) {
   const meta = getColumnTypeMeta(column.type);
   const fieldId = `field-${column.key}`;
-  const isWide = column.type === "longText";
+  const isWide = column.type === "longText" || column.type === "returnOffer";
+
+  if (meta.input === "returnOffer") {
+    return (
+      <div className="flex flex-col gap-1.5 sm:col-span-2">
+        {/* A heading, not a <label>: the editor is several controls, each
+            with its own name. */}
+        <span className="text-sm font-medium text-ink-900">{column.label}</span>
+        <ReturnOfferField value={value} onChange={onChange} onError={onError} />
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-1.5", isWide && "sm:col-span-2")}>
@@ -295,15 +344,22 @@ function RecordField({
           onChange={(event) => onChange(event.target.value)}
           className="min-h-24"
         />
-      ) : meta.input === "checkbox" ? (
-        <label className="flex h-12 cursor-pointer items-center gap-2 text-sm text-ink-700">
-          <Checkbox
+      ) : meta.input === "switch" ? (
+        // Same switch as the grid, so a yes/no looks and behaves the same in
+        // both places. The value stays a string ("true"/"false"/"" for unset):
+        // unset is not sent when creating, and an untouched switch is not sent
+        // when editing, because its string never changes.
+        <div className="flex h-12 items-center gap-2.5">
+          <Switch
             id={fieldId}
+            aria-label={column.label}
             checked={value === "true"}
-            onCheckedChange={(checked) => onChange(String(checked === true))}
+            onCheckedChange={(checked) => onChange(String(checked))}
           />
-          {es.admin.form.booleanHint}
-        </label>
+          <span className="text-sm text-ink-700">
+            {value === "true" ? es.admin.form.yes : es.admin.form.no}
+          </span>
+        </div>
       ) : (
         <Input
           id={fieldId}
@@ -381,5 +437,44 @@ function FormSelect({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * The offer editor inside the record form.
+ *
+ * The form stores strings; the editor works on a draft. This bridges the two:
+ * a USABLE draft goes up as the canonical JSON (or "" for "sin publicar"), so
+ * an untouched offer compares equal to its initial value and is not re-sent;
+ * an unusable one goes up as an error and leaves the value where it was.
+ */
+function ReturnOfferField({
+  value,
+  onChange,
+  onError,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onError: (message: string | null) => void;
+}) {
+  const [draft, setDraft] = useState<ReturnOfferDraft>(() =>
+    offerToDraft(parseReturnOffer(value))
+  );
+
+  return (
+    <ReturnOfferEditor
+      className="rounded-[10px] border border-line p-4"
+      draft={draft}
+      onDraftChange={(next) => {
+        setDraft(next);
+        const result = draftToOffer(next);
+        if (result.ok) {
+          onError(null);
+          onChange(serializeReturnOffer(result.offer));
+        } else {
+          onError(result.error);
+        }
+      }}
+    />
   );
 }

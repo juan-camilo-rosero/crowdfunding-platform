@@ -1,4 +1,10 @@
 import { formatCurrency, formatDate, formatPercent, formatPhone } from "@/lib/format";
+import {
+  describeReturnOffer,
+  parseReturnOffer,
+  serializeReturnOffer,
+} from "@/lib/projects/return-offer";
+import { parseBoolean } from "./boolean";
 import type { ColumnDataType } from "./column-types";
 import type { TableColumn } from "./types";
 
@@ -16,10 +22,16 @@ export function formatCellValue(
       return formatPercent(Number(value));
     case "date":
       return formatDate(String(value));
-    case "boolean":
-      return value ? "Sí" : "No";
+    case "boolean": {
+      // Not plain truthiness: an edited cell holds the STRING "false".
+      const flag = parseBoolean(value);
+      return flag === null ? "" : flag ? "Sí" : "No";
+    }
     case "phone":
       return formatPhone(String(value));
+    case "returnOffer":
+      // The label, never the JSON: an unreadable value shows nothing.
+      return describeReturnOffer(parseReturnOffer(value));
     default:
       return String(value);
   }
@@ -32,6 +44,15 @@ export function formatCellValue(
 export function toEditableValue(value: unknown, type: ColumnDataType): string {
   if (value === null || value === undefined) return "";
   if (type === "date") return String(value).slice(0, 10);
+  if (type === "returnOffer") {
+    // Canonical JSON, so an untouched offer compares equal to itself.
+    return serializeReturnOffer(parseReturnOffer(value));
+  }
+  if (type === "boolean") {
+    // Always one of the two strings the save understands, or "" for unset.
+    const flag = parseBoolean(value);
+    return flag === null ? "" : String(flag);
+  }
   return String(value);
 }
 
@@ -40,6 +61,9 @@ export function defaultColumnWidth(type: ColumnDataType): number {
   switch (type) {
     case "longText":
       return 320;
+    // "18%–22% al cierre · 18 meses" needs the room.
+    case "returnOffer":
+      return 280;
     case "email":
     case "url":
       return 240;

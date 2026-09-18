@@ -891,6 +891,14 @@ export const es = {
       disclaimer:
         "Simulación ilustrativa. Los rendimientos son estimados, no constituyen una oferta ni una garantía de retorno.",
       amountEmpty: "Escribe un monto para ver la estimación.",
+      // {offer} es la etiqueta de la oferta del proyecto, p. ej. "10%–15% anual".
+      basedOn: "Según la oferta del proyecto: {offer}",
+      termFixed: "Plazo estimado",
+      noTermNote:
+        "El proyecto no indica un plazo, así que no estimamos un valor mensual.",
+      participationTitle: "Retorno por participación",
+      participationBody:
+        "Este proyecto ofrece {offer}. El monto depende de la utilidad final del proyecto, por eso no lo estimamos aquí.",
     },
 
     interest: {
@@ -1122,7 +1130,9 @@ export const es = {
     form: {
       selectPlaceholder: "Selecciona una opción",
       selectClear: "Sin valor",
-      booleanHint: "Sí",
+      // Estado escrito junto a cada interruptor (sí/no), no solo por color.
+      yes: "Sí",
+      no: "No",
     },
 
     filters: {
@@ -1156,10 +1166,15 @@ export const es = {
       emptyHint: "La primera que subas será la portada en el catálogo.",
       // Says which one the catalogue picks up, since it uses the first.
       coverBadge: "Portada",
-      hint: "Formatos: JPG, PNG, WebP o AVIF. Máximo 30 MB por imagen.",
+      hint: "Formatos: JPG, PNG, WebP, AVIF o HEIC. Las fotos pesadas se optimizan antes de subirse, sin pérdida visible de calidad.",
       close: "Listo",
-      // {n} de {total} mientras se suben varias imágenes.
+      // {n} de {total} mientras se procesan varias imágenes.
+      optimizing: "Optimizando…",
+      progressOptimizing: "Optimizando imagen {n} de {total}…",
       progress: "Subiendo imagen {n} de {total}…",
+      // {from} y {to} son pesos ya formateados ("15,2 MB").
+      optimizedNote: "Optimizamos {n} imágenes: {from} → {to}.",
+      optimizedNoteOne: "Optimizamos 1 imagen: {from} → {to}.",
 
       errors: {
         notAdmin: "No tienes permiso para cambiar las fotos.",
@@ -1173,14 +1188,96 @@ export const es = {
         // Mensajes que nombran el archivo: con varias imágenes seleccionadas,
         // saber cuál falló es la diferencia entre poder arreglarlo o no.
         badTypeNamed:
-          "«{archivo}» no es un formato válido. Usa JPG, PNG, WebP o AVIF.",
-        tooLargeNamed: "«{archivo}» supera los 30 MB. Usa una versión más liviana.",
+          "«{archivo}» no es un formato válido. Usa JPG, PNG, WebP, AVIF o HEIC.",
+        tooLargeNamed:
+          "«{archivo}» pesa más de 80 MB y no podemos procesarla. Exporta una versión más liviana.",
+        stillTooLargeNamed:
+          "«{archivo}» sigue pesando más de 30 MB después de optimizarla. Exporta una versión más liviana.",
+        decodeNamed:
+          "No pudimos leer «{archivo}». Si es una foto HEIC de iPhone, compártela como JPG antes de subirla.",
         emptyNamed: "«{archivo}» está vacío y no se puede subir.",
-        uploadFailedNamed:
-          "No pudimos subir «{archivo}». Revisa tu conexión e inténtalo de nuevo; las imágenes anteriores sí se guardaron.",
+        // Motivos de falla al subir, para que la persona sepa qué hacer.
+        uploadTimeout:
+          "«{archivo}» tardó demasiado en subir. Revisa tu conexión e inténtalo de nuevo.",
+        uploadNetwork:
+          "Se perdió la conexión mientras subíamos «{archivo}». Inténtalo de nuevo.",
+        uploadPermission:
+          "Tu sesión no tiene permiso para subir fotos; puede haber expirado. Recarga la página e inténtalo de nuevo.",
+        uploadTooLarge: "El servidor rechazó «{archivo}» por su tamaño.",
+        uploadFailedNamed: "No pudimos subir «{archivo}». Inténtalo de nuevo.",
+        // Se agrega al final cuando algunas imágenes sí quedaron guardadas.
+        partialSaved: "Las {n} imágenes anteriores sí quedaron guardadas.",
+        partialSavedOne: "La imagen anterior sí quedó guardada.",
         unexpected:
           "Algo falló y no pudimos completar la acción. Vuelve a intentarlo; si sigue pasando, recarga la página.",
       },
+    },
+  },
+
+  // Retorno ofrecido de un proyecto (estructurado). {rate}, {n}, {from},
+  // {to}, {months} y {max} se reemplazan al momento de mostrarlos.
+  returnOffer: {
+    annual: "{rate} anual",
+    total: "{rate} al cierre",
+    participation: "{rate} de participación en utilidades",
+    monthOne: "1 mes",
+    months: "{n} meses",
+    monthSpan: "{from} a {to} meses",
+
+    // Editor del panel.
+    title: "Retorno ofrecido",
+    description:
+      "Cómo ofrece retorno este proyecto. Con esto se arma la etiqueta del catálogo y la calculadora de la página del proyecto.",
+    kindLabel: "Tipo de retorno",
+    kinds: {
+      none: "Sin publicar",
+      annual: "Tasa anual",
+      total: "Total al cierre",
+      participation: "Participación",
+    },
+    kindHints: {
+      none: "El proyecto no muestra retorno ni calculadora.",
+      annual:
+        "Una tasa por año según el plazo. Deja el máximo vacío si la tasa es fija.",
+      total:
+        "Un porcentaje total sobre el capital, pagado al cierre del proyecto.",
+      participation:
+        "Un porcentaje de las utilidades del proyecto. No se calcula un monto porque depende del resultado final.",
+    },
+    termMonths: "Plazo (meses)",
+    rateMin: "Tasa mínima %",
+    rateMax: "Tasa máxima %",
+    totalMin: "Retorno mínimo %",
+    totalMax: "Retorno máximo %",
+    totalMonths: "Plazo estimado (meses)",
+    optional: "Opcional",
+    participationLabel: "Participación en utilidades %",
+    addTerm: "Agregar plazo",
+    // {n} es el número de la fila.
+    removeTerm: "Quitar el plazo {n}",
+    preview: "Así se verá en el catálogo",
+    previewEmpty: "Sin retorno publicado",
+    save: "Guardar retorno",
+    cancel: "Cancelar",
+    // Texto libre anterior, mostrado mientras no se configure el nuevo.
+    legacy: "Texto anterior: {text}",
+    edit: "Configurar retorno ofrecido",
+
+    errors: {
+      invalid: "El retorno ofrecido no tiene un formato válido.",
+      kind: "Elige cómo se ofrece el retorno.",
+      noTerms: "Agrega al menos un plazo con su tasa.",
+      tooManyTerms: "Puedes definir hasta {n} plazos.",
+      termMonths:
+        "El plazo debe ser un número entero de meses, entre 1 y {max}.",
+      termMissingMonths: "Indica los meses del plazo en la fila {n}.",
+      termMissingRate: "Indica la tasa del plazo de {months} meses.",
+      duplicateTerm: "El plazo de {months} meses está repetido.",
+      rateNumber: "Escribe los porcentajes como números, por ejemplo 12 o 12,5.",
+      rateRange: "Cada porcentaje debe ser mayor que 0 y como máximo {max}%.",
+      maxBelowMin: "El máximo no puede ser menor que el mínimo.",
+      missingTotal: "Indica el retorno total al cierre.",
+      missingParticipation: "Indica el porcentaje de participación.",
     },
   },
 

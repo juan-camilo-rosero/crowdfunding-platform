@@ -68,6 +68,19 @@ values
    'Cerrado', '2026-02-27', false, null, null,
    '[MOCK] Proyecto cerrado con venta ejecutada en febrero.');
 
+-- Structured return offers (migration 20260918000000_projects_return_offer),
+-- one of each kind, so the calculator on /proyecto/[id] has real data to run
+-- on in development. The legacy text is cleared, as the admin save does.
+update public.projects set offered_return = null, return_offer =
+  '{"kind":"annual","terms":[{"months":6,"min":8,"max":12},{"months":12,"min":10,"max":15},{"months":18,"min":11,"max":16}]}'
+  where name = 'Punta Gorda Duplex 24' and description like '[MOCK]%';
+update public.projects set offered_return = null, return_offer =
+  '{"kind":"total","min":18,"max":22,"months":18}'
+  where name = 'Rotonda Multifamily 402' and description like '[MOCK]%';
+update public.projects set offered_return = null, return_offer =
+  '{"kind":"participation","percent":10}'
+  where name = 'North Port Lote 7' and description like '[MOCK]%';
+
 -- --------------------------------------------------------------- investors --
 insert into public.investors
   (full_name, document_id, phone, email, city_country, potential_amount,

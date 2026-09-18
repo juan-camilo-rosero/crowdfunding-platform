@@ -8,6 +8,8 @@ import { formatCellValue, toEditableValue } from "@/lib/table/format-cell";
 import type { TableColumn } from "@/lib/table/types";
 import { cn } from "@/lib/utils";
 import { TableCellStack } from "@/components/tables/TableCellStack";
+import { BooleanCell } from "./BooleanCell";
+import { ReturnOfferCell } from "./ReturnOfferCell";
 import { SelectCell } from "./SelectCell";
 
 export type EditableCellProps = {
@@ -31,6 +33,8 @@ export type EditableCellProps = {
    * shows the one line there is, centred in the taller row.
    */
   subtitle?: string;
+  /** The column's `fallback` field, read from the row (see TableColumn). */
+  fallbackValue?: unknown;
 };
 
 /**
@@ -58,6 +62,7 @@ export function EditableCell({
   readOnly = false,
   emphasized = false,
   subtitle = "",
+  fallbackValue,
 }: EditableCellProps) {
   const meta = getColumnTypeMeta(column.type);
   const [isEditing, setIsEditing] = useState(false);
@@ -82,7 +87,32 @@ export function EditableCell({
   const isStacked =
     !!column.subtitle?.length &&
     meta.input !== "textarea" &&
-    meta.input !== "checkbox";
+    meta.input !== "switch" &&
+    meta.input !== "returnOffer";
+
+  // A return offer is structured: it edits in its own dialog.
+  if (meta.input === "returnOffer") {
+    return (
+      <ReturnOfferCell
+        value={value}
+        fallbackValue={fallbackValue}
+        onCommit={onCommit}
+        readOnly={isLocked}
+      />
+    );
+  }
+
+  // Yes/no columns are a switch: always visible, one click, no edit mode.
+  if (meta.input === "switch") {
+    return (
+      <BooleanCell
+        value={value}
+        label={column.label}
+        onChange={onCommit}
+        readOnly={isLocked}
+      />
+    );
+  }
 
   // Select columns get their own always-interactive control.
   if (meta.input === "select") {
@@ -179,22 +209,6 @@ export function EditableCell({
             <PencilIcon className="size-3.5" aria-hidden="true" />
           </button>
         )}
-      </div>
-    );
-  }
-
-  if (meta.input === "checkbox") {
-    return (
-      <div className="flex h-full items-center px-6.25">
-        <input
-          ref={inputRef as React.Ref<HTMLInputElement>}
-          type="checkbox"
-          checked={draft === "true"}
-          onChange={(event) => setDraft(String(event.target.checked))}
-          onBlur={commit}
-          onKeyDown={handleKeyDown}
-          className="size-4 cursor-pointer accent-brand"
-        />
       </div>
     );
   }

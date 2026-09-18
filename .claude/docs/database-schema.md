@@ -38,6 +38,8 @@ Todas las tablas llevan: `id uuid primary key default gen_random_uuid()`, `creat
 | main_photos | text[] | URLs en Storage |
 | in_fundraising | boolean | catálogo como captación |
 | fundraising_goal | numeric(14,2) | meta si in_fundraising |
+| return_offer | jsonb | Retorno público ofrecido, estructurado. Tres formas: `{"kind":"annual","terms":[{"months","min","max"}]}` (tasa anual por plazo), `{"kind":"total","min","max","months"}` (total al cierre; `months` puede ser null), `{"kind":"participation","percent"}` (participación en utilidades). Porcentajes (12 = 12%), siempre rango min–max. Alimenta la etiqueta del catálogo y la calculadora. Validado en `lib/projects/return-offer.ts`; CHECK mínimo en la base. NO es el `agreed_return` por inversionista, que sigue siendo texto libre. |
+| offered_return | text | LEGADO: texto libre anterior. Solo se muestra como respaldo mientras `return_offer` es null; el guardado del admin lo limpia al escribir `return_offer`. |
 | lat | numeric(9,6) | mapa |
 | lng | numeric(9,6) | mapa |
 

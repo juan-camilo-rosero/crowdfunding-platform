@@ -160,18 +160,27 @@ Lo que más importa:
 
 - **Estado**: en evaluación, en reserva, permisos, construcción, vendido, rentado, pausado. Define el color con que se muestra el proyecto en todo el portal.
 - **Avance**: número entero de 0 a 100. Es la barra que ve el inversionista.
-- **En captación** y **meta de captación**: si lo marcas, el proyecto muestra una barra de recaudo y el botón "Me interesa" en el catálogo.
+- **En captación** y **meta de captación**: es un interruptor (Sí/No) que se cambia con **un solo clic** y se guarda al instante. Encendido, el proyecto muestra una barra de recaudo y el botón "Me interesa" en el catálogo.
 - **Descripción** y **argumentos de venta**: el texto que lee alguien evaluando invertir.
-- **Retorno ofrecido**: texto libre. Se muestra tal cual se escribe.
+- **Retorno ofrecido**: ya no es texto libre. Con el lápiz se abre un editor donde eliges cómo ofrece retorno el proyecto:
+  - **Tasa anual**: una o varias filas de plazo (meses) con tasa mínima y máxima. Si la tasa es fija, deja el máximo vacío.
+  - **Total al cierre**: un porcentaje total sobre el capital y, si lo sabes, el plazo estimado.
+  - **Participación**: el porcentaje de las utilidades del proyecto.
+  - **Sin publicar**: el proyecto no muestra retorno ni calculadora.
+
+  Abajo ves **exactamente cómo se verá en el catálogo** (por ejemplo "10%–15% anual · 6 a 18 meses"), o qué hay que corregir. Con esto funciona la **calculadora de la página del proyecto**: usa las tasas y plazos reales que configures. Con participación no se calcula un monto (depende de la utilidad final); se muestra una explicación. Sin retorno configurado, no aparece calculadora.
+
+  Los proyectos que tenían un texto anterior lo siguen mostrando en gris ("Texto anterior: …") hasta que configures el nuevo; al guardarlo, el texto anterior se reemplaza.
 
 #### Fotos
 
 En la columna **Fotos** de cada proyecto hay un botón que abre la galería. También puedes abrirla desde la propia página del proyecto en el catálogo (ver abajo).
 
 - **La primera foto es la portada** del catálogo. Puedes cambiar cuál es con "Usar como portada".
-- Formatos: JPG, PNG, WebP o AVIF. Máximo 30 MB por imagen.
-- Se suben una a una y verás "Subiendo imagen 2 de 5…". Cada una queda guardada apenas termina.
-- Si una imagen falla, el mensaje dice **cuál** y por qué; las anteriores ya quedaron guardadas. La ventana se puede cerrar en cualquier momento.
+- Formatos: JPG, PNG, WebP, AVIF o HEIC (las fotos de iPhone se convierten solas cuando el navegador puede leerlas).
+- **Las fotos se optimizan antes de subirse**: una foto de celular de 15 MB queda en 1–2 MB sin diferencia visible en la galería. Verás "Optimizando imagen 2 de 5…" y luego "Subiendo imagen 2 de 5…". Al terminar, un aviso dice cuánto se ahorró.
+- Las fotos que ya son livianas no se tocan.
+- Si una imagen falla, el mensaje dice **cuál** y **por qué** (conexión, sesión expirada, tamaño), y las que ya subieron quedan guardadas y visibles. La ventana se puede cerrar en cualquier momento.
 - Se ven en el catálogo y en la galería del proyecto.
 
 #### Editar un proyecto desde el catálogo

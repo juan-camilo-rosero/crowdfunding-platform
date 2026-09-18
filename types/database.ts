@@ -598,6 +598,7 @@ export type Database = {
           name: string
           next_step: string | null
           offered_return: string | null
+          return_offer: Json | null
           progress: number | null
           responsible: string | null
           selling_points: Json | null
@@ -626,6 +627,7 @@ export type Database = {
           name: string
           next_step?: string | null
           offered_return?: string | null
+          return_offer?: Json | null
           progress?: number | null
           responsible?: string | null
           selling_points?: Json | null
@@ -654,6 +656,7 @@ export type Database = {
           name?: string
           next_step?: string | null
           offered_return?: string | null
+          return_offer?: Json | null
           progress?: number | null
           responsible?: string | null
           selling_points?: Json | null

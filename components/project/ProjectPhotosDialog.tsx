@@ -4,16 +4,24 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { ImageIcon, StarIcon, TrashIcon, UploadIcon } from "lucide-react";
 import { es } from "@/i18n";
+import { formatBytes } from "@/lib/format";
 import {
-  ACCEPTED_IMAGE_TYPES,
-  MAX_SERVER_UPLOAD_BYTES,
-  rejectPhotoFile,
-  type ProjectPhotosResult,
-} from "@/lib/projects/photos";
+  CONVERTIBLE_IMAGE_TYPES,
+  compressImage,
+} from "@/lib/projects/image-compression";
+import {
+  runPhotoPipeline,
+  type PipelineDeps,
+  type PipelineProgress,
+} from "@/lib/projects/photo-pipeline";
 import {
   removeUploadedObjects,
   uploadPhotosToStorage,
 } from "@/lib/projects/photo-upload";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  type ProjectPhotosResult,
+} from "@/lib/projects/photos";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +38,26 @@ import {
   setProjectCoverPhoto,
   uploadProjectPhotos,
 } from "@/app/(admin)/admin/photo-actions";
+
+/** The real steps of the pipeline; tests replace the modules behind them. */
+const PIPELINE_DEPS: PipelineDeps = {
+  compress: (file) => compressImage(file),
+  uploadDirect: uploadPhotosToStorage,
+  attach: attachProjectPhotos,
+  uploadViaServer: uploadProjectPhotos,
+  removeObjects: removeUploadedObjects,
+};
+
+/**
+ * What the picker offers: the bucket's formats plus HEIC, which is converted
+ * on the way. Extensions too, because several systems label HEIC with no type.
+ */
+const PICKER_ACCEPT = [
+  ...ACCEPTED_IMAGE_TYPES,
+  ...CONVERTIBLE_IMAGE_TYPES,
+  ".heic",
+  ".heif",
+].join(",");
 
 export type ProjectPhotosDialogProps = {
   projectId: string;
@@ -74,10 +102,10 @@ export function ProjectPhotosDialog({
 
   const [photos, setPhotos] = useState<string[]>(initialPhotos);
   const [isBusy, setIsBusy] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(
-    null
-  );
+  const [progress, setProgress] = useState<PipelineProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** What optimising saved, after a successful upload. */
+  const [note, setNote] = useState<string | null>(null);
 
   function commit(next: string[]) {
     setPhotos(next);
@@ -92,6 +120,7 @@ export function ProjectPhotosDialog({
   async function run(action: () => Promise<ProjectPhotosResult>) {
     setIsBusy(true);
     setError(null);
+    setNote(null);
 
     try {
       const result = await action();
@@ -111,81 +140,36 @@ export function ProjectPhotosDialog({
   async function handleFiles(files: File[]) {
     if (files.length === 0) return;
 
-    // Refused BEFORE anything leaves the browser, and the message names the
-    // file: "una de tus imágenes es muy pesada" is not actionable with six
-    // selected.
-    for (const file of files) {
-      const rejection = rejectPhotoFile(file);
-      if (!rejection) continue;
-
-      setError(
-        es.admin.photos.errors[
-          rejection === "type"
-            ? "badTypeNamed"
-            : rejection === "size"
-              ? "tooLargeNamed"
-              : "emptyNamed"
-        ].replace("{archivo}", file.name)
-      );
-      return;
-    }
-
     setIsBusy(true);
     setError(null);
-    setProgress({ done: 0, total: files.length });
+    setNote(null);
+    setProgress({ phase: "optimizing", done: 0, total: files.length });
 
     try {
-      // Straight to Storage, with the admin's own session.
-      const upload = await uploadPhotosToStorage(projectId, files, (done, total) =>
-        setProgress({ done, total })
-      );
+      // Refuse, optimise, upload, attach — see lib/projects/photo-pipeline.ts.
+      // It never throws and always says what happened.
+      const result = await runPhotoPipeline(projectId, files, PIPELINE_DEPS, setProgress);
 
-      if (upload.ok) {
-        const result = await attachProjectPhotos({
-          projectId,
-          urls: upload.uploaded.map((photo) => photo.publicUrl),
-        });
-
-        if (!result.ok) {
-          // The row is the source of truth: files it does not point at are
-          // rubbish, so they go rather than linger in the bucket.
-          await removeUploadedObjects(upload.uploaded.map((photo) => photo.path));
-          setError(result.error);
-          return;
-        }
-
+      if (result.ok) {
         commit(result.photos);
+        if (result.optimized > 0) {
+          const template =
+            result.optimized === 1
+              ? es.admin.photos.optimizedNoteOne
+              : es.admin.photos.optimizedNote.replace("{n}", String(result.optimized));
+          setNote(
+            template
+              .replace("{from}", formatBytes(result.originalBytes))
+              .replace("{to}", formatBytes(result.finalBytes))
+          );
+        }
         return;
       }
 
-      // Direct upload refused. It may be a policy, a blocked request or an
-      // offline browser; small files get one more chance through the Server
-      // Action, which reaches Storage from the server side instead.
-      await removeUploadedObjects(upload.uploaded.map((photo) => photo.path));
-
-      const retryable = files.every(
-        (file) => file.size <= MAX_SERVER_UPLOAD_BYTES
-      );
-      if (!retryable) {
-        setError(
-          es.admin.photos.errors.uploadFailedNamed.replace(
-            "{archivo}",
-            upload.failedFile
-          )
-        );
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("projectId", projectId);
-      files.forEach((file) => formData.append("files", file));
-
-      const fallback = await uploadProjectPhotos(formData);
-      if (!fallback.ok) {
-        setError(fallback.error);
-        return;
-      }
-      commit(fallback.photos);
+      // Some photos may have made it before the failure: show them, since
+      // they ARE on the project now, and let the message say which did not.
+      if (result.photos) commit(result.photos);
+      setError(result.error);
     } catch {
       setError(es.admin.photos.errors.unexpected);
     } finally {
@@ -284,13 +268,22 @@ export function ProjectPhotosDialog({
           </ul>
         )}
 
-        {/* Which file of how many: a single spinner over a six-photo upload
-            says nothing about whether it is moving. */}
+        {/* Which step, which file of how many: a single spinner over six
+            photos says nothing about whether it is moving. */}
         {progress ? (
           <p aria-live="polite" className="text-sm text-ink-500">
-            {es.admin.photos.progress
+            {(progress.phase === "optimizing"
+              ? es.admin.photos.progressOptimizing
+              : es.admin.photos.progress
+            )
               .replace("{n}", String(Math.min(progress.done + 1, progress.total)))
               .replace("{total}", String(progress.total))}
+          </p>
+        ) : null}
+
+        {note ? (
+          <p role="status" className="text-sm text-ink-500">
+            {note}
           </p>
         ) : null}
 
@@ -312,7 +305,7 @@ export function ProjectPhotosDialog({
             ref={inputRef}
             type="file"
             multiple
-            accept={ACCEPTED_IMAGE_TYPES.join(",")}
+            accept={PICKER_ACCEPT}
             className="hidden"
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
@@ -326,7 +319,11 @@ export function ProjectPhotosDialog({
             type="button"
             variant="brand"
             loading={isBusy}
-            loadingText={es.admin.photos.uploading}
+            loadingText={
+              progress?.phase === "optimizing"
+                ? es.admin.photos.optimizing
+                : es.admin.photos.uploading
+            }
             onClick={() => inputRef.current?.click()}
           >
             <UploadIcon data-icon="inline-start" aria-hidden="true" />

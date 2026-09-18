@@ -5,6 +5,7 @@ import {
   CircleDotIcon,
   DollarSignIcon,
   DownloadIcon,
+  TrendingUpIcon,
   HomeIcon,
   HashIcon,
   LinkIcon,
@@ -47,7 +48,12 @@ export type ColumnDataType =
    * the editable grid has no reason to declare one, which is why its input kind
    * is a placeholder.
    */
-  | "action";
+  | "action"
+  /**
+   * A project's structured return offer (lib/projects/return-offer.ts). Reads
+   * as its label; edits in a dedicated editor, never as raw JSON.
+   */
+  | "returnOffer";
 
 /** HTML input types; "select" and "textarea" are rendered as their own controls. */
 export type ColumnInputKind =
@@ -57,9 +63,10 @@ export type ColumnInputKind =
   | "url"
   | "number"
   | "date"
-  | "checkbox"
+  | "switch"
   | "select"
-  | "textarea";
+  | "textarea"
+  | "returnOffer";
 
 export type ColumnTypeMeta = {
   /** Header icon. Represents the TYPE of the column, never the value. */
@@ -84,11 +91,12 @@ export const COLUMN_TYPE_META: Record<ColumnDataType, ColumnTypeMeta> = {
   date: { icon: CalendarIcon, input: "date", align: "left" },
   select: { icon: ListIcon, input: "select", align: "left" },
   // Lucide has no checkbox-ish "boolean" glyph that reads well at 16px;
-  // the toggle communicates the two-state nature best.
-  boolean: { icon: ToggleLeftIcon, input: "checkbox", align: "left" },
+  // the toggle communicates the two-state nature best — and the cell IS one.
+  boolean: { icon: ToggleLeftIcon, input: "switch", align: "left" },
   project: { icon: HomeIcon, input: "text", align: "left" },
   // Never edited: the cell content comes from the caller's renderCell.
   action: { icon: DownloadIcon, input: "text", align: "left" },
+  returnOffer: { icon: TrendingUpIcon, input: "returnOffer", align: "left" },
 };
 
 /** Fallback keeps an unknown type rendering instead of crashing the table. */

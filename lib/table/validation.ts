@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateReturnOffer } from "@/lib/projects/return-offer";
 import { es } from "@/i18n";
 import { optionValue, type TableColumn } from "./types";
 
@@ -143,6 +144,16 @@ export function validateRow(
 
     const error = validateValue(column, raw);
     if (error) return { ok: false, error };
+
+    // A structured offer is stored in its CANONICAL form (sorted terms, fixed
+    // key order, unknown fields dropped), not as whatever string arrived.
+    if (column.type === "returnOffer") {
+      const offer = validateReturnOffer(raw.trim());
+      if (!offer.ok) return { ok: false, error: offer.error };
+      clean[key] = offer.value;
+      continue;
+    }
+
     clean[key] = raw.trim();
   }
 

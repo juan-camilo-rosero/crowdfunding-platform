@@ -38,17 +38,6 @@ export const MAX_SERVER_UPLOAD_BYTES = 4 * 1024 * 1024;
  */
 export const PHOTO_UPLOAD_TIMEOUT_MS = 60_000;
 
-/** Why a file was refused, or null when it is fine. Checked before uploading. */
-export function rejectPhotoFile(file: {
-  type: string;
-  size: number;
-}): "type" | "size" | "empty" | null {
-  if (file.size === 0) return "empty";
-  if (!isAcceptedImage(file.type)) return "type";
-  if (file.size > MAX_PHOTO_BYTES) return "size";
-  return null;
-}
-
 export type ProjectPhotosResult =
   | { ok: true; photos: string[] }
   | { ok: false; error: string };

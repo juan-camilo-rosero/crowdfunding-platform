@@ -25,25 +25,6 @@ import {
   ProjectTabs,
   type ProjectTabId,
 } from "@/components/project/ProjectTabs";
-import type { ReturnTerm } from "@/components/project/ReturnCalculator";
-
-/**
- * MOCK terms for the return calculator.
- *
- * TODO(modelo de datos): terms and rate ranges are NOT in the schema. Adding
- * them means new columns or a `project_return_terms` table, which is a data
- * model decision rather than a UI one, so nothing was migrated. Once they
- * exist, load them here alongside the project and pass them through unchanged —
- * the calculator is already parameterised by props and knows nothing else.
- *
- * Ranges, never single rates: the screen must not imply a figure the investor
- * will receive.
- */
-const MOCK_RETURN_TERMS: ReturnTerm[] = [
-  { months: 6, annualMin: 0.08, annualMax: 0.12 },
-  { months: 12, annualMin: 0.1, annualMax: 0.15 },
-  { months: 18, annualMin: 0.11, annualMax: 0.16 },
-];
 
 /** Milestones pulled for the "Avance" timeline. */
 const MILESTONES_LIMIT = 30;
@@ -250,7 +231,8 @@ export default async function ProjectDetailPage({
         <ProjectSummary
           description={project.description}
           sellingPoints={project.selling_points}
-          terms={MOCK_RETURN_TERMS}
+          // The project's own offer: the calculator runs on it or not at all.
+          returnOffer={project.return_offer}
           closedToInvestment={closedToInvestment}
         />
       ),

@@ -52,6 +52,13 @@ export type TableColumn = {
    * sent to the server or validated.
    */
   subtitle?: readonly string[];
+  /**
+   * A legacy field shown, muted and read-only, while this column is EMPTY —
+   * so data entered before the column existed is not silently hidden.
+   * `return_offer` falls back to the old free-text `offered_return`.
+   * Presentation only: never sent, never validated.
+   */
+  fallback?: string;
 };
 
 /** One record. Keys match `TableColumn.key`. */

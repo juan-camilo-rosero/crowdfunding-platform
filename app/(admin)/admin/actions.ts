@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { es } from "@/i18n";
 import { isAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { withRetiredLegacyReturn } from "@/lib/table/legacy-return";
 import { validateRow } from "@/lib/table/validation";
 import type { TableChanges } from "@/lib/table/types";
 import { ADMIN_TABLES } from "./table-definitions";
@@ -57,14 +58,17 @@ export async function saveTableChanges(
   for (const update of updates) {
     const result = validateRow(definition.columns, update.values, "update");
     if (!result.ok) return { ok: false, error: result.error };
-    validatedUpdates.push({ id: update.id, values: result.values });
+    validatedUpdates.push({
+      id: update.id,
+      values: withRetiredLegacyReturn(definition.source, result.values),
+    });
   }
 
   const validatedInserts: Record<string, string | null>[] = [];
   for (const insert of inserts) {
     const result = validateRow(definition.columns, insert, "insert");
     if (!result.ok) return { ok: false, error: result.error };
-    validatedInserts.push(result.values);
+    validatedInserts.push(withRetiredLegacyReturn(definition.source, result.values));
   }
 
   const supabase = await createClient();

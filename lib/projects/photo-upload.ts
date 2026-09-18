@@ -4,6 +4,8 @@ import {
   PROJECT_PHOTOS_BUCKET,
   buildPhotoPath,
 } from "./photos";
+import { classifyUploadError, type UploadFailure } from "./upload-errors";
+import { withTimeout } from "./with-timeout";
 
 /**
  * Uploading a photo FROM THE BROWSER, straight into Storage.
@@ -30,19 +32,14 @@ export type UploadedPhoto = { path: string; publicUrl: string };
 
 export type DirectUploadResult =
   | { ok: true; uploaded: UploadedPhoto[] }
-  | { ok: false; uploaded: UploadedPhoto[]; failedFile: string };
-
-/** Rejects instead of hanging when the network never answers. */
-async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>;
-
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error("upload-timeout")), ms);
-    }),
-  ]).finally(() => clearTimeout(timer)) as Promise<T>;
-}
+  | {
+      ok: false;
+      /** Everything uploaded BEFORE the failure — still in the bucket. */
+      uploaded: UploadedPhoto[];
+      /** Position of the file that failed, in the list passed in. */
+      failedIndex: number;
+      reason: UploadFailure;
+    };
 
 /**
  * Uploads files one by one, reporting progress between them.
@@ -62,6 +59,14 @@ export async function uploadPhotosToStorage(
   const supabase = createClient();
   const uploaded: UploadedPhoto[] = [];
 
+  const fail = (failedIndex: number, error: unknown, file: File): DirectUploadResult => {
+    const reason = classifyUploadError(error);
+    // Kept in the console on purpose: "no pudimos subir" on an admin's screen
+    // is not enough to diagnose a production failure, the raw error is.
+    console.error("[photos] upload failed", { file: file.name, size: file.size, reason, error });
+    return { ok: false, uploaded, failedIndex, reason };
+  };
+
   for (const [index, file] of files.entries()) {
     onProgress?.(index, files.length);
 
@@ -72,13 +77,14 @@ export async function uploadPhotosToStorage(
         supabase.storage
           .from(PROJECT_PHOTOS_BUCKET)
           .upload(path, file, { contentType: file.type, upsert: false }),
-        PHOTO_UPLOAD_TIMEOUT_MS
+        PHOTO_UPLOAD_TIMEOUT_MS,
+        "upload"
       );
 
-      if (error) return { ok: false, uploaded, failedFile: file.name };
-    } catch {
+      if (error) return fail(index, error, file);
+    } catch (error) {
       // Timeout, or a fetch that never resolved.
-      return { ok: false, uploaded, failedFile: file.name };
+      return fail(index, error, file);
     }
 
     const {
@@ -100,7 +106,8 @@ export async function removeUploadedObjects(paths: string[]): Promise<void> {
     const supabase = createClient();
     await withTimeout(
       supabase.storage.from(PROJECT_PHOTOS_BUCKET).remove(paths),
-      PHOTO_UPLOAD_TIMEOUT_MS
+      PHOTO_UPLOAD_TIMEOUT_MS,
+      "remove"
     );
   } catch {
     // An orphaned object in a bucket is not worth failing the flow over; the

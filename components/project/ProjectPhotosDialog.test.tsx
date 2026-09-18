@@ -16,6 +16,13 @@ const attachProjectPhotos = vi.fn();
 const uploadProjectPhotos = vi.fn();
 const removeProjectPhoto = vi.fn();
 const setProjectCoverPhoto = vi.fn();
+const compressImage = vi.fn();
+
+// Only the browser work is replaced; limits and type helpers stay real.
+vi.mock("@/lib/projects/image-compression", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/projects/image-compression")>()),
+  compressImage: (...args: unknown[]) => compressImage(...args),
+}));
 
 vi.mock("@/lib/projects/photo-upload", () => ({
   uploadPhotosToStorage: (...args: unknown[]) => uploadPhotosToStorage(...args),
@@ -88,6 +95,12 @@ beforeEach(() => {
     photos: [`${BUCKET_URL}/p-1/a.jpg`],
   });
   removeUploadedObjects.mockResolvedValue(undefined);
+  // By default a photo goes up as picked.
+  compressImage.mockImplementation(async (input: File) => ({
+    ok: true,
+    file: input,
+    compressed: false,
+  }));
 });
 
 describe("files the browser refuses before uploading anything", () => {
@@ -131,7 +144,8 @@ describe("when the direct upload does not work", () => {
     uploadPhotosToStorage.mockResolvedValue({
       ok: false,
       uploaded: [],
-      failedFile: "fachada.jpg",
+      failedIndex: 0,
+      reason: "unknown",
     });
     uploadProjectPhotos.mockResolvedValue({
       ok: true,
@@ -150,7 +164,8 @@ describe("when the direct upload does not work", () => {
     uploadPhotosToStorage.mockResolvedValue({
       ok: false,
       uploaded: [],
-      failedFile: "enorme.jpg",
+      failedIndex: 0,
+      reason: "network",
     });
 
     renderDialog();
@@ -193,6 +208,105 @@ describe("when the direct upload does not work", () => {
         screen.getByRole("button", { name: new RegExp(es.admin.photos.addLabel) })
       ).toBeEnabled()
     );
+  });
+});
+
+describe("optimising before uploading", () => {
+  it("says it is optimising while a photo is being processed", async () => {
+    const user = userEvent.setup();
+    compressImage.mockImplementation(() => new Promise(() => {}));
+
+    renderDialog();
+    await pick(user, [file("fachada.jpg", { size: 15 * 1024 * 1024 })]);
+
+    expect(
+      await screen.findByText(
+        es.admin.photos.progressOptimizing.replace("{n}", "1").replace("{total}", "1")
+      )
+    ).toBeInTheDocument();
+    expect(uploadPhotosToStorage).not.toHaveBeenCalled();
+  });
+
+  it("uploads the OPTIMISED file, not the original", async () => {
+    const user = userEvent.setup();
+    const optimised = file("fachada.webp", { size: 2 * 1024 * 1024, type: "image/webp" });
+    compressImage.mockResolvedValue({ ok: true, file: optimised, compressed: true });
+
+    renderDialog();
+    await pick(user, [file("fachada.jpg", { size: 15 * 1024 * 1024 })]);
+
+    await waitFor(() => expect(uploadPhotosToStorage).toHaveBeenCalled());
+    expect(uploadPhotosToStorage.mock.calls[0][1]).toEqual([optimised]);
+  });
+
+  it("tells the admin what optimising saved", async () => {
+    const user = userEvent.setup();
+    compressImage.mockResolvedValue({
+      ok: true,
+      file: file("fachada.webp", { size: 2 * 1024 * 1024, type: "image/webp" }),
+      compressed: true,
+    });
+
+    renderDialog();
+    await pick(user, [file("fachada.jpg", { size: 15 * 1024 * 1024 })]);
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      es.admin.photos.optimizedNoteOne.replace("{from}", "15 MB").replace("{to}", "2 MB")
+    );
+  });
+
+  it("says nothing about savings when nothing was optimised", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await pick(user, [file("fachada.jpg")]);
+
+    await waitFor(() => expect(attachProjectPhotos).toHaveBeenCalled());
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("names a photo it could not read", async () => {
+    const user = userEvent.setup();
+    compressImage.mockResolvedValue({ ok: false, reason: "decode" });
+
+    renderDialog();
+    await pick(user, [file("IMG_0001.heic", { type: "image/heic" })]);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("IMG_0001.heic");
+    expect(uploadPhotosToStorage).not.toHaveBeenCalled();
+  });
+
+  it("offers HEIC in the picker, since it can be converted", () => {
+    renderDialog();
+
+    const accept = document.querySelector('input[type="file"]')!.getAttribute("accept")!;
+    expect(accept).toContain("image/heic");
+    expect(accept).toContain(".heic");
+  });
+});
+
+describe("a partial failure", () => {
+  it("keeps the photos that made it on screen and says they were saved", async () => {
+    const user = userEvent.setup();
+    uploadPhotosToStorage.mockResolvedValue({
+      ok: false,
+      uploaded: [{ path: "p-1/a.jpg", publicUrl: `${BUCKET_URL}/p-1/a.jpg` }],
+      failedIndex: 1,
+      reason: "network",
+    });
+    attachProjectPhotos.mockResolvedValue({ ok: true, photos: [`${BUCKET_URL}/p-1/a.jpg`] });
+
+    renderDialog();
+    await pick(user, [
+      file("a.jpg"),
+      file("b.jpg", { size: MAX_SERVER_UPLOAD_BYTES + 1 }),
+    ]);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("b.jpg");
+    expect(alert).toHaveTextContent(es.admin.photos.errors.partialSavedOne);
+    // Photo a is on the project, and on screen.
+    expect(document.querySelectorAll("img")).toHaveLength(1);
+    expect(removeUploadedObjects).not.toHaveBeenCalled();
   });
 });
 

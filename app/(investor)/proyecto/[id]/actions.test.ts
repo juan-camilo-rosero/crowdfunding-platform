@@ -83,6 +83,44 @@ describe("updateProjectFromDetail", () => {
     });
   });
 
+  it("stores a return offer canonically and retires the legacy text", async () => {
+    await updateProjectFromDetail(PROJECT_ID, {
+      return_offer: JSON.stringify({ percent: 8, kind: "participation" }),
+    });
+
+    expect(rpc).toHaveBeenCalledWith("admin_save_table_changes", {
+      p_table: "projects",
+      p_updates: [
+        {
+          id: PROJECT_ID,
+          values: {
+            return_offer: '{"kind":"participation","percent":8}',
+            offered_return: null,
+          },
+        },
+      ],
+      p_inserts: [],
+    });
+  });
+
+  it("refuses an invalid return offer without writing", async () => {
+    const result = await updateProjectFromDetail(PROJECT_ID, {
+      return_offer: JSON.stringify({ kind: "participation", percent: 0 }),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("refuses the legacy text column: it is not editable any more", async () => {
+    const result = await updateProjectFromDetail(PROJECT_ID, {
+      offered_return: "Hasta 99% anual",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("says so when there is nothing to save", async () => {
     const result = await updateProjectFromDetail(PROJECT_ID, {});
 

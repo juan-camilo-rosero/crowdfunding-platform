@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { es } from "@/i18n";
 import { isAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { withRetiredLegacyReturn } from "@/lib/table/legacy-return";
 import { validateRow } from "@/lib/table/validation";
 import { findAdminTable } from "@/app/(admin)/admin/table-definitions";
 
@@ -51,7 +52,12 @@ export async function updateProjectFromDetail(
   const supabase = await createClient();
   const { error } = await supabase.rpc("admin_save_table_changes", {
     p_table: PROJECTS_TABLE.source,
-    p_updates: [{ id: projectId, values: validated.values }],
+    p_updates: [
+      {
+        id: projectId,
+        values: withRetiredLegacyReturn(PROJECTS_TABLE.source, validated.values),
+      },
+    ],
     p_inserts: [],
   });
 

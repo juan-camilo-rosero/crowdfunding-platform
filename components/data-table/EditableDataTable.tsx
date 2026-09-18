@@ -257,6 +257,7 @@ export function EditableDataTable({
                     // The frozen first column is the record's name; it carries
                     // the row the way the header carries the table.
                     emphasized={columnIndex === 0}
+                    fallbackValue={column.fallback ? row[column.fallback] : undefined}
                     // Read through valueFor, so the line under a project's name
                     // follows an edit to its city before the server confirms it.
                     subtitle={buildSubtitle(
