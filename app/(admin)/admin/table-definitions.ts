@@ -185,6 +185,37 @@ export const ADMIN_TABLES: AdminTableDefinition[] = [
     ],
   },
   {
+    id: "transacciones",
+    label: "Transacciones",
+    source: "transactions",
+    orderBy: "date",
+    columns: [
+      { key: "investor_id", label: "Inversionista", type: "select", width: 260, required: true },
+      { key: "project_id", label: "Proyecto", type: "select", width: 220, required: true },
+      { key: "date", label: "Fecha", type: "date", required: true },
+      {
+        key: "type",
+        label: "Tipo de movimiento",
+        type: "select",
+        required: true,
+        // 'reasignación' queda FUERA a propósito: esa transacción la genera la
+        // aprobación de una solicitud (views.md). Escribirla a mano duplicaría
+        // el capital que se movió.
+        options: ["aporte", "rendimiento", "devolución de capital"],
+      },
+      // Siempre positivo: la dirección del dinero la da el tipo, no el signo
+      // (CLAUDE.md). La validación rechaza negativos.
+      { key: "amount", label: "Monto", type: "currency", required: true },
+      {
+        key: "capital_type",
+        label: "Tipo de capital",
+        type: "select",
+        // Solo tiene sentido en un aporte; en los demás se deja vacío.
+        options: ["equity", "deuda", "préstamo", "socio"],
+      },
+    ],
+  },
+  {
     id: "presupuesto",
     label: "Presupuesto",
     source: "budget_items",
