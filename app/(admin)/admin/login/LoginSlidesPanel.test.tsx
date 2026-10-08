@@ -8,6 +8,8 @@ const addLoginSlides = vi.fn();
 const setLoginSlideCaption = vi.fn();
 const reorderLoginSlides = vi.fn();
 const deleteLoginSlide = vi.fn();
+const replaceLoginSlideImage = vi.fn();
+const adoptDefaultLoginSlides = vi.fn();
 const runPhotoPipeline = vi.fn();
 const refresh = vi.fn();
 
@@ -16,6 +18,8 @@ vi.mock("./actions", () => ({
   setLoginSlideCaption: (input: unknown) => setLoginSlideCaption(input),
   reorderLoginSlides: (input: unknown) => reorderLoginSlides(input),
   deleteLoginSlide: (input: unknown) => deleteLoginSlide(input),
+  replaceLoginSlideImage: (input: unknown) => replaceLoginSlideImage(input),
+  adoptDefaultLoginSlides: () => adoptDefaultLoginSlides(),
 }));
 vi.mock("@/lib/projects/photo-pipeline", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/projects/photo-pipeline")>()),
@@ -55,6 +59,8 @@ beforeEach(() => {
   setLoginSlideCaption.mockResolvedValue({ ok: true });
   reorderLoginSlides.mockResolvedValue({ ok: true });
   deleteLoginSlide.mockResolvedValue({ ok: true });
+  replaceLoginSlideImage.mockResolvedValue({ ok: true });
+  adoptDefaultLoginSlides.mockResolvedValue({ ok: true });
   runPhotoPipeline.mockResolvedValue({
     ok: true,
     photos: [],
@@ -71,10 +77,30 @@ describe("what the screen shows", () => {
     expect(document.querySelectorAll("img")).toHaveLength(3);
   });
 
-  it("says when the app's own images are still in use", () => {
+  it("says when the app's own images are still in use, and why", () => {
     renderPanel(SLIDES, true);
 
     expect(screen.getByText(t.empty)).toBeInTheDocument();
+    expect(screen.getByText(t.emptyHint)).toBeInTheDocument();
+  });
+
+  it("shows the bundled ones as a preview, with nothing to edit", () => {
+    renderPanel(SLIDES, true);
+
+    expect(screen.queryByLabelText(t.captionLabel.replace("{n}", "1"))).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: t.remove.replace("{n}", "1") })
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers to keep the bundled four as editable slides", async () => {
+    const user = userEvent.setup();
+    renderPanel(SLIDES, true);
+
+    await user.click(screen.getByRole("button", { name: t.adopt }));
+
+    await waitFor(() => expect(adoptDefaultLoginSlides).toHaveBeenCalled());
+    expect(refresh).toHaveBeenCalled();
   });
 
   it("says nothing of the sort once there are real slides", () => {
@@ -125,7 +151,7 @@ describe("the caption", () => {
     const user = userEvent.setup();
     renderPanel();
 
-    const field = screen.getByLabelText(t.captionLabel.replace("{n}", "1"));
+    const field = screen.getByLabelText(new RegExp(t.captionLabel.replace("{n}", "1")));
     await user.clear(field);
     await user.type(field, "Nueva frase");
     await user.tab();
@@ -142,7 +168,7 @@ describe("the caption", () => {
     const user = userEvent.setup();
     renderPanel();
 
-    await user.click(screen.getByLabelText(t.captionLabel.replace("{n}", "1")));
+    await user.click(screen.getByLabelText(new RegExp(t.captionLabel.replace("{n}", "1"))));
     await user.tab();
 
     expect(setLoginSlideCaption).not.toHaveBeenCalled();
@@ -227,5 +253,112 @@ describe("removing", () => {
     await user.click(within(dialog).getByRole("button", { name: t.remove.replace("{n}", "2") }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(t.errors.saveFailed);
+  });
+});
+
+describe("changing the image of a slide", () => {
+  it("offers it on every row, by button and on the thumbnail", () => {
+    renderPanel();
+
+    expect(
+      screen.getAllByRole("button", { name: t.replaceShort })
+    ).toHaveLength(SLIDES.length);
+    expect(
+      screen.getByRole("button", { name: t.replace.replace("{n}", "1") })
+    ).toBeInTheDocument();
+  });
+
+  it("replaces that slide's image instead of adding a new one", async () => {
+    const user = userEvent.setup();
+    runPhotoPipeline.mockImplementation(async (_folder, _files, deps) => {
+      await deps.attach({ projectId: "login", urls: ["https://x/login/nueva.webp"] });
+      return { ok: true, photos: [], originalBytes: 0, finalBytes: 0, optimized: 0 };
+    });
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: t.replace.replace("{n}", "2") }));
+    await pickFile(user);
+
+    await waitFor(() =>
+      expect(replaceLoginSlideImage).toHaveBeenCalledWith({
+        id: "s2",
+        url: "https://x/login/nueva.webp",
+      })
+    );
+    expect(addLoginSlides).not.toHaveBeenCalled();
+  });
+
+  it("adds instead of replacing when the main button was used", async () => {
+    const user = userEvent.setup();
+    runPhotoPipeline.mockImplementation(async (_folder, _files, deps) => {
+      await deps.attach({ projectId: "login", urls: ["https://x/login/nueva.webp"] });
+      return { ok: true, photos: [], originalBytes: 0, finalBytes: 0, optimized: 0 };
+    });
+    renderPanel();
+
+    await user.click(screen.getByRole("button", { name: t.add }));
+    await pickFile(user);
+
+    await waitFor(() => expect(addLoginSlides).toHaveBeenCalled());
+    expect(replaceLoginSlideImage).not.toHaveBeenCalled();
+  });
+});
+
+describe("there is always at least one image", () => {
+  it("offers no way to remove the only slide, and says why", () => {
+    renderPanel([SLIDES[0]]);
+
+    expect(
+      screen.queryByRole("button", { name: t.remove.replace("{n}", "1") })
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(t.lastSlideHint)).toBeInTheDocument();
+  });
+
+  it("offers it again as soon as there are two", () => {
+    renderPanel(SLIDES.slice(0, 2));
+
+    expect(
+      screen.getByRole("button", { name: t.remove.replace("{n}", "1") })
+    ).toBeInTheDocument();
+  });
+});
+
+describe("editing a caption", () => {
+  it("confirms that it saved", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const field = screen.getByLabelText(new RegExp(t.captionLabel.replace("{n}", "1")));
+    await user.clear(field);
+    await user.type(field, "Otra frase");
+    await user.tab();
+
+    expect(await screen.findByText(t.captionSaved)).toBeInTheDocument();
+  });
+
+  it("saves with Enter, without leaving the field by hand", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const field = screen.getByLabelText(new RegExp(t.captionLabel.replace("{n}", "1")));
+    await user.clear(field);
+    await user.type(field, "Con Enter{Enter}");
+
+    await waitFor(() =>
+      expect(setLoginSlideCaption).toHaveBeenCalledWith({ id: "s1", caption: "Con Enter" })
+    );
+  });
+
+  it("shows the reason when the caption cannot be saved", async () => {
+    const user = userEvent.setup();
+    setLoginSlideCaption.mockResolvedValue({ ok: false, error: t.errors.captionLong });
+    renderPanel();
+
+    const field = screen.getByLabelText(new RegExp(t.captionLabel.replace("{n}", "1")));
+    await user.clear(field);
+    await user.type(field, "Otra frase");
+    await user.tab();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(t.errors.captionLong);
   });
 });

@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  CheckIcon,
   ImageIcon,
+  RefreshCwIcon,
   Trash2Icon,
   UploadIcon,
 } from "lucide-react";
@@ -31,8 +33,10 @@ import { FormDialog } from "@/components/ui/form-dialog";
 import { Input } from "@/components/ui/input";
 import {
   addLoginSlides,
+  adoptDefaultLoginSlides,
   deleteLoginSlide,
   reorderLoginSlides,
+  replaceLoginSlideImage,
   setLoginSlideCaption,
 } from "./actions";
 
@@ -55,25 +59,32 @@ export type LoginSlidesPanelProps = {
 /**
  * Admin screen for the login carousel.
  *
- * Uploading reuses the project photo pipeline wholesale — the same validation,
- * the same browser-side optimisation, the same error handling — with two
- * differences: the destination folder is `login/` instead of a project id, and
- * there is no Server Action fallback, because this screen has none. Reusing it
- * is deliberate: the upload path that was hardened against hangs and partial
- * failures is not worth writing a second time.
+ * TWO STATES, told apart on purpose. While nothing is configured the login
+ * falls back to four images that live INSIDE the app; they are shown here as a
+ * preview, never as editable rows, and the screen says plainly that uploading
+ * one own image replaces that whole set — the alternative ("my four photos got
+ * deleted") is what the first version of this screen caused. The way out is
+ * offered right there: adopt the four as ordinary slides and edit them one by
+ * one.
  *
- * While no slide exists the screen shows the bundled images as a preview and
- * offers only "add": there is nothing to order, rename or delete yet, and
- * pretending otherwise would promise edits the app cannot make to files that
- * ship inside it.
+ * Uploading reuses the project photo pipeline wholesale — same validation,
+ * same browser-side optimisation, same error handling — with the destination
+ * folder `login/` and no Server Action fallback.
  */
 export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  /** What the next file picked is for: a new slide, or replacing one. */
+  const pickerTarget = useRef<{ mode: "add" } | { mode: "replace"; id: string }>({
+    mode: "add",
+  });
 
   const [isBusy, setIsBusy] = useState(false);
   const [progress, setProgress] = useState<PipelineProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAdopting, setIsAdopting] = useState(false);
+  /** Id of the slide whose caption was just saved, for the inline confirmation. */
+  const [savedCaption, setSavedCaption] = useState<string | null>(null);
   const [removing, setRemoving] = useState<{ slide: LoginSlide; index: number } | null>(
     null
   );
@@ -81,19 +92,24 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
   const [removeError, setRemoveError] = useState<string | null>(null);
 
   /** The pipeline, wired to this screen: no project row, no server fallback. */
-  const deps: PipelineDeps = {
-    compress: (file) => compressImage(file),
-    uploadDirect: uploadPhotosToStorage,
-    attach: async ({ urls }) => {
-      const result = await addLoginSlides({ urls });
-      return result.ok ? { ok: true, photos: urls } : { ok: false, error: result.error };
-    },
-    removeObjects: removeUploadedObjects,
-  };
+  function pipelineDeps(attach: (urls: string[]) => Promise<{ ok: boolean; error?: string }>): PipelineDeps {
+    return {
+      compress: (file) => compressImage(file),
+      uploadDirect: uploadPhotosToStorage,
+      attach: async ({ urls }) => {
+        const result = await attach(urls);
+        return result.ok
+          ? { ok: true, photos: urls }
+          : { ok: false, error: result.error ?? t.errors.saveFailed };
+      },
+      removeObjects: removeUploadedObjects,
+    };
+  }
 
   async function handleFiles(files: File[]) {
     if (files.length === 0) return;
 
+    const target = pickerTarget.current;
     setIsBusy(true);
     setError(null);
     setProgress({ phase: "optimizing", done: 0, total: files.length });
@@ -101,8 +117,13 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
     try {
       const result = await runPhotoPipeline(
         LOGIN_SLIDES_FOLDER,
-        files,
-        deps,
+        // Replacing is one image, whatever the picker returned.
+        target.mode === "replace" ? files.slice(0, 1) : files,
+        pipelineDeps((urls) =>
+          target.mode === "replace"
+            ? replaceLoginSlideImage({ id: target.id, url: urls[0] })
+            : addLoginSlides({ urls })
+        ),
         setProgress
       );
 
@@ -116,20 +137,45 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
     } finally {
       setIsBusy(false);
       setProgress(null);
+      pickerTarget.current = { mode: "add" };
     }
   }
 
-  /** Saves the caption only when it actually changed. */
+  function pickFor(target: { mode: "add" } | { mode: "replace"; id: string }) {
+    pickerTarget.current = target;
+    inputRef.current?.click();
+  }
+
+  async function handleAdopt() {
+    setIsAdopting(true);
+    setError(null);
+    try {
+      const result = await adoptDefaultLoginSlides();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError(t.errors.saveFailed);
+    } finally {
+      setIsAdopting(false);
+    }
+  }
+
+  /** Saves the caption only when it actually changed, and says so. */
   async function handleCaption(slide: LoginSlide, caption: string) {
     if (caption.trim() === (slide.caption ?? "")) return;
 
     setError(null);
+    setSavedCaption(null);
     try {
       const result = await setLoginSlideCaption({ id: slide.id, caption });
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setSavedCaption(slide.id);
       router.refresh();
     } catch {
       setError(t.errors.saveFailed);
@@ -178,58 +224,115 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
   return (
     <div className="flex flex-col gap-5">
       {usingDefaults ? (
-        <div className="flex flex-col gap-1 rounded-[10px] border border-line bg-surface px-5 py-4">
-          <p className="text-base font-medium text-ink-900">{t.empty}</p>
-          <p className="text-sm text-ink-500">{t.emptyHint}</p>
-        </div>
-      ) : null}
+        <section className="flex flex-col gap-4 rounded-[10px] border border-line bg-surface p-5">
+          <div className="flex flex-col gap-1">
+            <p className="text-base font-medium text-ink-900">{t.empty}</p>
+            <p className="max-w-3xl text-sm text-ink-500">{t.emptyHint}</p>
+          </div>
 
-      <ul className="flex flex-col gap-3">
-        {slides.map((slide, index) => {
-          const number = String(index + 1);
-          return (
-            <li
-              key={slide.id}
-              className="flex flex-col gap-3 rounded-[10px] border border-line bg-elevated p-3 sm:flex-row sm:items-center"
+          {/* A preview, not a list of rows: these cannot be edited, and showing
+              them as editable rows is what made them look deletable. */}
+          <ul className="flex flex-wrap gap-3">
+            {slides.map((slide) => (
+              <li
+                key={slide.id}
+                className="relative h-20 w-32 overflow-hidden rounded-[5px] border border-line bg-elevated"
+              >
+                <Image src={slide.imageUrl} alt="" fill sizes="128px" className="object-cover" />
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-col gap-1">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-fit"
+              loading={isAdopting}
+              loadingText={t.adopting}
+              onClick={() => void handleAdopt()}
             >
-              <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-[5px] bg-surface sm:w-40">
-                <Image
-                  src={slide.imageUrl}
-                  alt=""
-                  fill
-                  sizes="160px"
-                  className="object-cover"
-                  unoptimized={slide.imageUrl.startsWith("http")}
-                />
-                {usingDefaults ? (
-                  <span className="absolute top-1.5 left-1.5 rounded-[500px] bg-ink-900/80 px-2 py-0.5 text-xs font-medium text-white">
-                    {t.usingDefaults}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <label
-                  htmlFor={`caption-${slide.id}`}
-                  className="text-sm font-medium text-ink-700"
+              <ImageIcon data-icon="inline-start" aria-hidden="true" />
+              {t.adopt}
+            </Button>
+            <p className="text-xs text-ink-400">{t.adoptHint}</p>
+          </div>
+        </section>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {slides.map((slide, index) => {
+            const number = String(index + 1);
+            return (
+              <li
+                key={slide.id}
+                className="flex flex-col gap-3 rounded-[10px] border border-line bg-elevated p-3 sm:flex-row sm:items-center"
+              >
+                {/* The image IS the control that changes it: clicking the
+                    thumbnail or its button opens the picker for this slide. */}
+                <button
+                  type="button"
+                  aria-label={t.replace.replace("{n}", number)}
+                  disabled={isBusy}
+                  onClick={() => pickFor({ mode: "replace", id: slide.id })}
+                  className="group/img relative h-24 w-full shrink-0 cursor-pointer overflow-hidden rounded-[5px] bg-surface outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default sm:w-40"
                 >
-                  {t.captionLabel.replace("{n}", number)}
-                </label>
-                <Input
-                  id={`caption-${slide.id}`}
-                  inputSize="xl"
-                  maxLength={120}
-                  defaultValue={slide.caption ?? ""}
-                  placeholder={t.captionPlaceholder}
-                  disabled={usingDefaults}
-                  onBlur={(event) => void handleCaption(slide, event.target.value)}
-                />
-              </div>
+                  <Image
+                    src={slide.imageUrl}
+                    alt=""
+                    fill
+                    sizes="160px"
+                    className="object-cover transition-opacity group-hover/img:opacity-60"
+                    unoptimized={slide.imageUrl.startsWith("http")}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center gap-1.5 bg-ink-900/60 text-xs font-medium text-white opacity-0 transition-opacity group-hover/img:opacity-100 group-focus-visible/img:opacity-100">
+                    <RefreshCwIcon className="size-3.5" aria-hidden="true" />
+                    {t.replaceShort}
+                  </span>
+                </button>
 
-              {/* The bundled images are files inside the app: they can be
-                  replaced by uploading, never reordered or deleted. */}
-              {usingDefaults ? null : (
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <label
+                    htmlFor={`caption-${slide.id}`}
+                    className="flex items-center gap-2 text-sm font-medium text-ink-700"
+                  >
+                    {t.captionLabel.replace("{n}", number)}
+                    {savedCaption === slide.id ? (
+                      <span
+                        role="status"
+                        className="inline-flex items-center gap-1 text-xs font-normal text-ink-500"
+                      >
+                        <CheckIcon className="size-3.5" aria-hidden="true" />
+                        {t.captionSaved}
+                      </span>
+                    ) : null}
+                  </label>
+                  <Input
+                    id={`caption-${slide.id}`}
+                    inputSize="xl"
+                    maxLength={120}
+                    defaultValue={slide.caption ?? ""}
+                    placeholder={t.captionPlaceholder}
+                    onFocus={() => setSavedCaption(null)}
+                    onBlur={(event) => void handleCaption(slide, event.target.value)}
+                    onKeyDown={(event) => {
+                      // Enter saves, like leaving the field.
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
+                  />
+                </div>
+
                 <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isBusy}
+                    onClick={() => pickFor({ mode: "replace", id: slide.id })}
+                  >
+                    <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />
+                    {t.replaceShort}
+                  </Button>
+
                   {index > 0 ? (
                     <Button
                       type="button"
@@ -252,25 +355,32 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
                       <ArrowDownIcon aria-hidden="true" />
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-ink-400 hover:bg-destructive/10 hover:text-destructive"
-                    aria-label={t.remove.replace("{n}", number)}
-                    onClick={() => {
-                      setRemoveError(null);
-                      setRemoving({ slide, index });
-                    }}
-                  >
-                    <Trash2Icon aria-hidden="true" />
-                  </Button>
+
+                  {/* The login needs at least one image, so the only slide
+                      left offers no way to remove it. */}
+                  {slides.length > 1 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-ink-400 hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={t.remove.replace("{n}", number)}
+                      onClick={() => {
+                        setRemoveError(null);
+                        setRemoving({ slide, index });
+                      }}
+                    >
+                      <Trash2Icon aria-hidden="true" />
+                    </Button>
+                  ) : (
+                    <span className="max-w-40 text-xs text-ink-400">{t.lastSlideHint}</span>
+                  )}
                 </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {progress ? (
         <p aria-live="polite" className="text-sm text-ink-500">
@@ -309,7 +419,7 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
           variant="brand"
           loading={isBusy}
           loadingText={progress?.phase === "optimizing" ? t.optimizing : t.adding}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => pickFor({ mode: "add" })}
         >
           <UploadIcon data-icon="inline-start" aria-hidden="true" />
           {t.add}
@@ -342,9 +452,7 @@ export function LoginSlidesPanel({ slides, usingDefaults }: LoginSlidesPanelProp
                 unoptimized={removing.slide.imageUrl.startsWith("http")}
               />
             </span>
-            <p className="text-sm text-ink-500">
-              {removing.slide.caption ?? <ImageIcon className="size-4" aria-hidden="true" />}
-            </p>
+            <p className="text-sm text-ink-500">{removing.slide.caption ?? ""}</p>
           </div>
         ) : null}
       </FormDialog>

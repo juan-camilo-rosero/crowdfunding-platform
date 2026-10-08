@@ -1314,7 +1314,9 @@ export const es = {
     title: "Pantalla de login",
     subtitle:
       "Las imágenes que se ven a la derecha en el inicio de sesión. Puedes cambiarlas, ordenarlas y ponerles una frase.",
-    add: "Agregar imagen",
+    add: "Subir imagen",
+    replace: "Cambiar la imagen {n}",
+    replaceShort: "Cambiar imagen",
     adding: "Subiendo…",
     optimizing: "Optimizando…",
     // {n} de {total}.
@@ -1328,16 +1330,28 @@ export const es = {
     saved: "Guardado",
     hint: "Formatos: JPG, PNG, WebP, AVIF o HEIC. Se optimizan antes de subirse. La frase admite hasta 120 caracteres.",
     // Estado cuando no hay ninguna configurada.
-    empty: "Estás usando las cuatro imágenes que vienen con la aplicación",
+    empty: "El login está mostrando las imágenes que vienen con la aplicación",
     emptyHint:
-      "Sube una imagen para reemplazarlas. Mientras no subas ninguna, el login sigue mostrando las de siempre.",
-    usingDefaults: "Imágenes por defecto",
+      "No están guardadas aquí: son el respaldo que se usa mientras no subas ninguna. En cuanto subas la primera, el carrusel mostrará solo las tuyas y estas cuatro dejarán de aparecer.",
+    adopt: "Conservar estas cuatro y poder editarlas",
+    adopting: "Copiando…",
+    adoptHint:
+      "Las agrega como imágenes tuyas: después puedes cambiarlas, reordenarlas o quitarlas una por una.",
+    usingDefaults: "Imagen de la aplicación",
     preview: "Así se ve en el login",
+    // Aviso breve tras guardar una frase.
+    captionSaved: "Frase guardada",
+    // Por qué no se puede borrar la última.
+    lastSlideHint: "El login necesita al menos una imagen.",
 
     errors: {
       notAdmin: "No tienes permiso para cambiar estas imágenes.",
       noFile: "Elige una imagen para subir.",
       badUrl: "Esa imagen no está en el almacenamiento de la aplicación.",
+      alreadyConfigured:
+        "El carrusel ya tiene imágenes propias; no hace falta copiar las de la aplicación.",
+      lastSlide:
+        "Debe quedar al menos una imagen. Sube otra antes de quitar esta.",
       captionLong: "La frase no puede pasar de 120 caracteres.",
       saveFailed: "No pudimos guardar el cambio. Inténtalo de nuevo.",
       loadError: "No pudimos cargar las imágenes del login.",

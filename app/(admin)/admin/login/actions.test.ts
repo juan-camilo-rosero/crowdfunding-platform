@@ -56,8 +56,14 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const { addLoginSlides, deleteLoginSlide, reorderLoginSlides, setLoginSlideCaption } =
-  await import("./actions");
+const {
+  addLoginSlides,
+  adoptDefaultLoginSlides,
+  deleteLoginSlide,
+  reorderLoginSlides,
+  replaceLoginSlideImage,
+  setLoginSlideCaption,
+} = await import("./actions");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -168,7 +174,11 @@ describe("reordering", () => {
 
 describe("deleting", () => {
   it("removes the row and its file from the bucket", async () => {
-    slides = [{ id: ID, image_url: `${BUCKET}/login/a.webp`, position: 0 }];
+    // Two slides: deleting the last one is refused (see the suite below).
+    slides = [
+      { id: ID, image_url: `${BUCKET}/login/a.webp`, position: 0 },
+      { id: "33333333-3333-4333-8333-333333333333", image_url: `${BUCKET}/login/b.webp`, position: 1 },
+    ];
 
     const result = await deleteLoginSlide({ id: ID });
 
@@ -178,12 +188,124 @@ describe("deleting", () => {
   });
 
   it("still deletes the row when the image lives somewhere we do not own", async () => {
-    slides = [{ id: ID, image_url: "https://otro-sitio.com/foto.jpg", position: 0 }];
+    slides = [
+      { id: ID, image_url: "https://otro-sitio.com/foto.jpg", position: 0 },
+      { id: "33333333-3333-4333-8333-333333333333", image_url: `${BUCKET}/login/b.webp`, position: 1 },
+    ];
 
     const result = await deleteLoginSlide({ id: ID });
 
     expect(result.ok).toBe(true);
     expect(remove).toHaveBeenCalled();
     expect(storageRemove).not.toHaveBeenCalled();
+  });
+});
+
+describe("there must always be at least one image", () => {
+  it("refuses deleting the last slide", async () => {
+    slides = [{ id: ID, image_url: `${BUCKET}/login/a.webp`, position: 0 }];
+
+    const result = await deleteLoginSlide({ id: ID });
+
+    expect(result).toEqual({ ok: false, error: es.adminLogin.errors.lastSlide });
+    expect(remove).not.toHaveBeenCalled();
+    expect(storageRemove).not.toHaveBeenCalled();
+  });
+
+  it("deletes when another one remains", async () => {
+    slides = [
+      { id: ID, image_url: `${BUCKET}/login/a.webp`, position: 0 },
+      { id: "22222222-2222-4222-8222-222222222222", image_url: `${BUCKET}/login/b.webp`, position: 1 },
+    ];
+
+    const result = await deleteLoginSlide({ id: ID });
+
+    expect(result.ok).toBe(true);
+    expect(remove).toHaveBeenCalledWith("login_slides");
+  });
+});
+
+describe("replacing the image of a slide", () => {
+  it("points the slide at the new image and deletes the old file", async () => {
+    slides = [{ id: ID, image_url: `${BUCKET}/login/vieja.webp`, position: 0 }];
+
+    const result = await replaceLoginSlideImage({
+      id: ID,
+      url: `${BUCKET}/login/nueva.webp`,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(update).toHaveBeenCalledWith(
+      "login_slides",
+      expect.objectContaining({ image_url: `${BUCKET}/login/nueva.webp` })
+    );
+    // The old object would otherwise sit in the bucket with nothing pointing at it.
+    expect(storageRemove).toHaveBeenCalledWith(["login/vieja.webp"]);
+  });
+
+  it("keeps the caption and the position untouched", async () => {
+    slides = [{ id: ID, image_url: `${BUCKET}/login/vieja.webp`, position: 3 }];
+
+    await replaceLoginSlideImage({ id: ID, url: `${BUCKET}/login/nueva.webp` });
+
+    const payload = update.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("caption");
+    expect(payload).not.toHaveProperty("position");
+  });
+
+  it("refuses a url that is not in our bucket", async () => {
+    const result = await replaceLoginSlideImage({
+      id: ID,
+      url: "https://otro-sitio.com/foto.jpg",
+    });
+
+    expect(result).toEqual({ ok: false, error: es.adminLogin.errors.badUrl });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("refuses a visitor", async () => {
+    callerRole = "visitante";
+
+    const result = await replaceLoginSlideImage({
+      id: ID,
+      url: `${BUCKET}/login/nueva.webp`,
+    });
+
+    expect(result).toEqual({ ok: false, error: es.adminLogin.errors.notAdmin });
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("keeping the images the app ships with", () => {
+  it("copies the four bundled ones into the table, with their captions", async () => {
+    slides = [];
+
+    const result = await adoptDefaultLoginSlides();
+
+    expect(result.ok).toBe(true);
+    const rows = insert.mock.calls[0][1] as Record<string, unknown>[];
+    expect(rows).toHaveLength(es.login.carouselSlides.length);
+    expect(rows[0]).toEqual({
+      image_url: "/carousel/login_carousel_1.jpg",
+      caption: es.login.carouselSlides[0],
+      position: 0,
+    });
+    expect(rows.map((row) => row.position)).toEqual([0, 1, 2, 3]);
+  });
+
+  it("refuses once the carousel has its own images: it would duplicate them", async () => {
+    slides = [{ id: ID, image_url: `${BUCKET}/login/a.webp`, position: 0 }];
+
+    const result = await adoptDefaultLoginSlides();
+
+    expect(result).toEqual({ ok: false, error: es.adminLogin.errors.alreadyConfigured });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("refuses a visitor", async () => {
+    callerRole = "visitante";
+
+    expect((await adoptDefaultLoginSlides()).ok).toBe(false);
+    expect(insert).not.toHaveBeenCalled();
   });
 });
