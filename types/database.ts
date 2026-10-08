@@ -294,6 +294,33 @@ export type Database = {
           },
         ]
       }
+      login_slides: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          position: number
+          updated_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          position?: number
+          updated_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          position?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       identity_verifications: {
         Row: {
           completed_at: string | null

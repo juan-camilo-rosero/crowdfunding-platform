@@ -6,10 +6,14 @@ import type { UserDirectoryEntry } from "@/lib/users/convertible";
 
 const convertVisitorToInvestor = vi.fn();
 const sendContractForSignature = vi.fn();
+const deleteUserAccount = vi.fn();
 const refresh = vi.fn();
 
 vi.mock("./actions", () => ({
   convertVisitorToInvestor: (input: unknown) => convertVisitorToInvestor(input),
+}));
+vi.mock("./delete-actions", () => ({
+  deleteUserAccount: (input: unknown) => deleteUserAccount(input),
 }));
 vi.mock("./contract-actions", () => ({
   sendContractForSignature: (input: unknown) => sendContractForSignature(input),
@@ -86,7 +90,8 @@ const USERS = [
   PENDING_ONBOARDING,
 ];
 
-const renderPanel = (users = USERS) => render(<UsersDirectoryPanel users={users} />);
+const renderPanel = (users = USERS, props: { currentUserId?: string } = {}) =>
+  render(<UsersDirectoryPanel users={users} {...props} />);
 
 const rowFor = (name: string) => screen.getByText(name).closest("tr")!;
 
@@ -463,5 +468,120 @@ describe("converting", () => {
       within(screen.getByRole("dialog")).getByText(es.adminUsers.errors.alreadyInvestor)
     ).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleting an account", () => {
+  const d = es.adminUsers.delete;
+  const openDelete = async (user: ReturnType<typeof userEvent.setup>, name: string) => {
+    await user.click(
+      within(rowFor(name)).getByRole("button", { name: d.open.replace("{name}", name) })
+    );
+    return screen.findByRole("dialog");
+  };
+
+  beforeEach(() => {
+    deleteUserAccount.mockResolvedValue({ ok: true, keptInvestorRecord: false });
+  });
+
+  it("offers a delete control on every row but your own", () => {
+    renderPanel(undefined, { currentUserId: "u2" });
+
+    expect(
+      within(rowFor("Ana Pérez")).getByRole("button", {
+        name: d.open.replace("{name}", "Ana Pérez"),
+      })
+    ).toBeInTheDocument();
+    // Beto is the signed-in admin: the server refuses it, so the UI does not
+    // even offer it.
+    expect(
+      within(rowFor("Beto Ruiz")).queryByRole("button", {
+        name: d.open.replace("{name}", "Beto Ruiz"),
+      })
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks for confirmation naming the person, and warns it cannot be undone", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+
+    expect(within(dialog).getByText(/Ana Pérez/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/ana@ejemplo\.com/)).toBeInTheDocument();
+    expect(within(dialog).getByText(d.irreversible)).toBeInTheDocument();
+    expect(deleteUserAccount).not.toHaveBeenCalled();
+  });
+
+  it("says the investor's file and money survive, when the account is linked", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const dialog = await openDelete(user, "Dana Sol");
+
+    expect(within(dialog).getByText(d.keepsInvestor)).toBeInTheDocument();
+  });
+
+  it("does not promise that for someone who is not an investor", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+
+    expect(within(dialog).queryByText(d.keepsInvestor)).not.toBeInTheDocument();
+  });
+
+  it("deletes on confirmation and reports it", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    await waitFor(() => expect(deleteUserAccount).toHaveBeenCalledWith({ userId: "u1" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(d.success);
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open with the reason when the server refuses", async () => {
+    const user = userEvent.setup();
+    deleteUserAccount.mockResolvedValue({
+      ok: false,
+      error: es.adminUsers.errors.deleteLastAdmin,
+    });
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      es.adminUsers.errors.deleteLastAdmin
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("does not freeze if the action rejects", async () => {
+    const user = userEvent.setup();
+    deleteUserAccount.mockRejectedValue(new Error("network"));
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      es.adminUsers.errors.deleteFailed
+    );
+    expect(within(dialog).getByRole("button", { name: d.confirm })).toBeEnabled();
+  });
+
+  it("closes without deleting on cancel", async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const dialog = await openDelete(user, "Ana Pérez");
+    await user.click(within(dialog).getByRole("button", { name: es.common.cancel }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(deleteUserAccount).not.toHaveBeenCalled();
   });
 });

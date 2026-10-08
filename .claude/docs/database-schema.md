@@ -192,6 +192,16 @@ Tokens de Expo de la app móvil (`investors_180_mobile`, repo aparte, mismo proy
 | device_name | text | nullable |
 | last_seen_at | timestamptz | lo refresca la app al abrir |
 
+## login_slides
+Imágenes del carrusel de la pantalla de login, editables desde `/admin/login`. Los archivos viven en el bucket `project-photos`, carpeta `login/`.
+| Campo | Tipo | Notas |
+|---|---|---|
+| image_url | text | URL pública del objeto en Storage. No vacío (CHECK) |
+| caption | text | Frase que acompaña la imagen; nullable, máximo 120 caracteres (CHECK) |
+| position | integer | Orden de aparición, 0–100 (CHECK). Empates se rompen por `created_at` |
+
+RLS: **lectura abierta a `anon` y `authenticated`** — la pantalla de login se renderiza sin sesión y no hay nada privado aquí. Escritura solo `public.is_admin()`. Sin filas, la app muestra las cuatro imágenes estáticas de `/public/carousel` (`lib/site/login-slides.ts`), así que el login nunca depende de esta tabla.
+
 ## notifications
 Feed de notificaciones, una fila por destinatario. **Contrato compartido con la app móvil: no renombrar.** Insertar la fila ES enviar la notificación: un Database Webhook la entrega a la Edge Function `push-send` (ver integrations.md). No lleva `updated_at`.
 | Campo | Tipo | Notas |

@@ -109,6 +109,7 @@ IMPORTANTE: la fila "ver datos de otro inversionista" es el requisito de segurid
 - **Perder el vínculo de inversionista** (se borra su fila en `investors`): deja de ver las pestañas de inversionista de inmediato, pero conserva su `role`. Si era admin, sigue siendo admin.
 - **Admin que además invierte** (la dueña): ve ambas secciones. Quitarle el vínculo no le quita el admin, y quitarle el admin no le quita sus inversiones.
 - Suspendido con sesión abierta: pierde acceso en su siguiente acción.
+- **Eliminar una cuenta** (`/admin/usuarios`): borra el acceso, la verificación de identidad, los intereses y las notificaciones de esa persona. NO borra su ficha de `investors` ni nada que cuelgue de ella (aportes, transacciones, documentos): la ficha queda con `user_id = null` y puede volver a vincularse a otra cuenta. Se bloquea eliminar la cuenta propia y al último admin (`lib/users/deletable.ts`).
 - Nunca se puede eliminar al último admin. La regla aplica sobre `role = 'admin'`, y es independiente de si esa persona tiene o no vínculo de inversionista.
 - Email invitado que nunca entra: no cuenta como activo ni recibe reportes.
 - Cambio de email: admin actualiza el vínculo sin perder historial.

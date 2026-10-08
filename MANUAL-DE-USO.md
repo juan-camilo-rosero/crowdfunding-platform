@@ -282,6 +282,16 @@ Cuando un botón no aparece, en su lugar verás la razón:
 | Onboarding pendiente | Todavía no completó sus datos personales |
 | No aplica a administradores | Los admins no se convierten desde aquí |
 
+### Eliminar una cuenta
+
+Cada fila tiene un botón de papelera a la derecha. Antes de borrar, la ventana dice exactamente qué pasa:
+
+- **Se elimina**: su acceso a la plataforma, su verificación de identidad, las solicitudes de interés que haya enviado y sus notificaciones.
+- **NO se elimina**: si la persona es inversionista, su ficha, sus aportes, sus transacciones y sus documentos se conservan. La ficha queda sin cuenta asociada y puedes volver a conectarla a una cuenta nueva desde esta misma pantalla.
+- No se puede deshacer.
+
+Dos casos que el sistema bloquea siempre: **no puedes eliminar tu propia cuenta** (en tu fila ni aparece el botón) y **no puedes eliminar al último administrador**; primero asciende a otra persona.
+
 ### Enviar el contrato a firma
 
 En la fila de alguien que **ya es inversionista** aparece **"Enviar contrato a firma"**.
@@ -293,6 +303,19 @@ En la fila de alguien que **ya es inversionista** aparece **"Enviar contrato a f
 La persona recibe el contrato para firmarlo electrónicamente. El proceso completo está en [Los procesos](#firma-del-contrato).
 
 El inversionista no puede pedir su contrato por su cuenta. Siempre lo envía el equipo.
+
+---
+
+## 5.1. Pantalla de login
+
+En el menú, **Pantalla de login**. Son las imágenes grandes que se ven a la derecha cuando alguien entra a iniciar sesión.
+
+- **Agregar imagen**: se suben igual que las fotos de un proyecto (se optimizan solas antes de subirse).
+- **Frase**: cada imagen puede llevar una frase corta debajo, de máximo 120 caracteres. Se guarda al salir del campo. Si la dejas vacía, la imagen se muestra sola.
+- **Orden**: las flechas suben o bajan cada imagen. Ese es el orden en que rotan.
+- **Quitar**: la papelera elimina la imagen y su archivo.
+
+Mientras no subas ninguna, el login sigue mostrando las cuatro imágenes que vienen con la aplicación; las verás en gris con la etiqueta "Imágenes por defecto". En cuanto subas la primera, el login pasa a mostrar solo las tuyas.
 
 ---
 

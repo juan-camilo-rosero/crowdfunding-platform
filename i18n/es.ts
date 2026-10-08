@@ -557,6 +557,28 @@ export const es = {
     resultsCountOne: "1 usuario",
     tableCaption: "Personas con cuenta en la plataforma",
 
+    // Eliminar una cuenta. El texto dice qué se pierde y qué no, porque es
+    // irreversible y la duda típica es si se borran los aportes.
+    delete: {
+      // {name} se reemplaza con el nombre de la persona.
+      open: "Eliminar la cuenta de {name}",
+      title: "Eliminar cuenta",
+      description:
+        "Se elimina el acceso de esta persona a la plataforma. No se puede deshacer.",
+      // {name} y {email} se reemplazan al mostrar.
+      person: "{name} · {email}",
+      removes:
+        "Se eliminan: su inicio de sesión, su verificación de identidad, sus solicitudes de interés y sus notificaciones.",
+      keepsInvestor:
+        "Su ficha de inversionista NO se elimina: sus aportes, transacciones y documentos se conservan, y la ficha queda sin cuenta asociada. Puedes volver a vincularla a una cuenta nueva más adelante.",
+      irreversible: "Esta acción no se puede deshacer.",
+      confirm: "Eliminar cuenta",
+      deleting: "Eliminando…",
+      success: "Eliminamos la cuenta.",
+      successKeptInvestor:
+        "Eliminamos la cuenta. Su ficha de inversionista quedó sin cuenta asociada.",
+    },
+
     convert: "Convertir en inversionista",
     converting: "Convirtiendo…",
 
@@ -589,6 +611,11 @@ export const es = {
       isAdmin: "No se puede convertir a un administrador desde aquí.",
       onboardingPending: "Esa persona todavía no completó su onboarding.",
       alreadyInvestor: "Esa persona ya está vinculada como inversionista.",
+      // Eliminación de cuentas.
+      deleteSelf: "No puedes eliminar tu propia cuenta.",
+      deleteLastAdmin:
+        "Es el único administrador que queda. Asciende a otra persona antes de eliminarlo.",
+      deleteFailed: "No pudimos eliminar la cuenta. Inténtalo de nuevo.",
       failed: "No pudimos completar la conversión. Inténtalo de nuevo.",
     },
   },
@@ -1079,6 +1106,7 @@ export const es = {
     reports: "Reportes",
     users: "Usuarios",
     notifications: "Notificaciones",
+    loginScreen: "Pantalla de login",
     pipeline: "Pipeline",
     approvals: "Aprobaciones",
   },
@@ -1278,6 +1306,41 @@ export const es = {
       maxBelowMin: "El máximo no puede ser menor que el mínimo.",
       missingTotal: "Indica el retorno total al cierre.",
       missingParticipation: "Indica el porcentaje de participación.",
+    },
+  },
+
+  // Pantalla de administración del carrusel del login.
+  adminLogin: {
+    title: "Pantalla de login",
+    subtitle:
+      "Las imágenes que se ven a la derecha en el inicio de sesión. Puedes cambiarlas, ordenarlas y ponerles una frase.",
+    add: "Agregar imagen",
+    adding: "Subiendo…",
+    optimizing: "Optimizando…",
+    // {n} de {total}.
+    progressOptimizing: "Optimizando imagen {n} de {total}…",
+    progress: "Subiendo imagen {n} de {total}…",
+    captionLabel: "Frase de la imagen {n}",
+    captionPlaceholder: "Opcional: una frase corta",
+    moveUp: "Mover la imagen {n} hacia arriba",
+    moveDown: "Mover la imagen {n} hacia abajo",
+    remove: "Quitar la imagen {n}",
+    saved: "Guardado",
+    hint: "Formatos: JPG, PNG, WebP, AVIF o HEIC. Se optimizan antes de subirse. La frase admite hasta 120 caracteres.",
+    // Estado cuando no hay ninguna configurada.
+    empty: "Estás usando las cuatro imágenes que vienen con la aplicación",
+    emptyHint:
+      "Sube una imagen para reemplazarlas. Mientras no subas ninguna, el login sigue mostrando las de siempre.",
+    usingDefaults: "Imágenes por defecto",
+    preview: "Así se ve en el login",
+
+    errors: {
+      notAdmin: "No tienes permiso para cambiar estas imágenes.",
+      noFile: "Elige una imagen para subir.",
+      badUrl: "Esa imagen no está en el almacenamiento de la aplicación.",
+      captionLong: "La frase no puede pasar de 120 caracteres.",
+      saveFailed: "No pudimos guardar el cambio. Inténtalo de nuevo.",
+      loadError: "No pudimos cargar las imágenes del login.",
     },
   },
 

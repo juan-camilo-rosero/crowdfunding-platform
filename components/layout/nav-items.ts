@@ -6,6 +6,7 @@ import {
   FilterIcon,
   FolderIcon,
   HomeIcon,
+  ImageIcon,
   InboxIcon,
   LayoutGridIcon,
   UsersIcon,
@@ -59,5 +60,6 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: es.nav.adminPanel, icon: DatabaseIcon, exact: true },
   { href: "/admin/usuarios", label: es.nav.users, icon: UsersIcon },
   { href: "/admin/notificaciones", label: es.nav.notifications, icon: BellIcon },
+  { href: "/admin/login", label: es.nav.loginScreen, icon: ImageIcon },
   { href: "/admin/pipeline", label: es.nav.salesFunnel, icon: FilterIcon },
 ];

@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ActivityIcon, FileSignatureIcon, SearchIcon, UserPlusIcon, UsersIcon } from "lucide-react";
+import {
+  ActivityIcon,
+  FileSignatureIcon,
+  SearchIcon,
+  Trash2Icon,
+  UserPlusIcon,
+  UsersIcon,
+} from "lucide-react";
 import { es } from "@/i18n";
 import { formatDate } from "@/lib/format";
 import {
@@ -22,10 +29,17 @@ import { FilterDropdown } from "@/components/filters/FilterDropdown";
 import { ReadOnlyDataTable } from "@/components/tables/ReadOnlyDataTable";
 import { TableCellStack } from "@/components/tables/TableCellStack";
 import { convertVisitorToInvestor } from "./actions";
+import { deleteUserAccount } from "./delete-actions";
 import { sendContractForSignature } from "./contract-actions";
 
 export type UsersDirectoryPanelProps = {
   users: UserDirectoryEntry[];
+  /**
+   * The admin looking at the screen. Their own row gets no delete control:
+   * the Server Action refuses it anyway, and offering a button that always
+   * fails is worse than not offering it.
+   */
+  currentUserId?: string;
 };
 
 /**
@@ -62,7 +76,10 @@ const FILTER_OPTIONS: { value: DirectoryFilter; label: string }[] = [
  * avoids a round trip per keystroke. If the list ever stops being scannable it
  * moves to the URL like the catalogue's filters.
  */
-export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
+export function UsersDirectoryPanel({
+  users,
+  currentUserId,
+}: UsersDirectoryPanelProps) {
   const router = useRouter();
 
   const [query, setQuery] = useState("");
@@ -71,6 +88,11 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  /** The account about to be deleted, if the admin opened that dialog. */
+  const [deleteTarget, setDeleteTarget] = useState<UserDirectoryEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /** The investor whose contract is being sent, and the chosen PDF. */
   const [contractTarget, setContractTarget] = useState<UserDirectoryEntry | null>(null);
@@ -102,6 +124,37 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
     setContractTarget(null);
     setContractFile(null);
     router.refresh();
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const result = await deleteUserAccount({ userId: deleteTarget.id });
+
+      if (!result.ok) {
+        // The dialog stays open with the reason: last admin, own account…
+        setDeleteError(result.error);
+        return;
+      }
+
+      setNotice(
+        result.keptInvestorRecord
+          ? es.adminUsers.delete.successKeptInvestor
+          : es.adminUsers.delete.success
+      );
+      setDeleteTarget(null);
+      router.refresh();
+    } catch {
+      // A rejected Server Action must land as a message, never as a dialog
+      // stuck on "Eliminando…".
+      setDeleteError(es.adminUsers.errors.deleteFailed);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const visible = useMemo(
@@ -237,38 +290,30 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
           if (column.key === "action") {
             const reason = notConvertibleReason(user);
 
-            // Already an investor: the useful action here is not converting
-            // them again but sending the contract they have to sign.
-            if (user.isInvestor) {
-              return (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setContractError(null);
-                    setNotice(null);
-                    setContractFile(null);
-                    setContractTarget(user);
-                  }}
-                >
-                  <FileSignatureIcon data-icon="inline-start" aria-hidden="true" />
-                  {es.adminContract.send}
-                </Button>
-              );
-            }
-
-            // A reason instead of a dead button: the row says why, and the
-            // condition is the same one the Server Action enforces.
-            if (reason) {
-              return (
-                <span className="text-sm text-ink-400">
-                  {es.adminUsers.cannotConvert[reason]}
-                </span>
-              );
-            }
-
-            return (
+            // The row's MAIN action: send the contract to an investor, convert
+            // a visitor, or say why neither applies.
+            const primary = user.isInvestor ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setContractError(null);
+                  setNotice(null);
+                  setContractFile(null);
+                  setContractTarget(user);
+                }}
+              >
+                <FileSignatureIcon data-icon="inline-start" aria-hidden="true" />
+                {es.adminContract.send}
+              </Button>
+            ) : reason ? (
+              // A reason instead of a dead button: the row says why, and the
+              // condition is the same one the Server Action enforces.
+              <span className="text-sm text-ink-400">
+                {es.adminUsers.cannotConvert[reason]}
+              </span>
+            ) : (
               <Button
                 type="button"
                 variant="brand"
@@ -282,6 +327,36 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
                 <UserPlusIcon data-icon="inline-start" aria-hidden="true" />
                 {es.adminUsers.convert}
               </Button>
+            );
+
+            return (
+              <span className="flex items-center justify-between gap-2">
+                {primary}
+
+                {/* Destructive, so it is an icon set apart from the main
+                    action and never the first thing under the pointer. Absent
+                    on your own row: the server refuses that, and a button that
+                    always fails is worse than no button. */}
+                {user.id === currentUserId ? null : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-ink-400 hover:bg-destructive/10 hover:text-destructive"
+                    aria-label={es.adminUsers.delete.open.replace(
+                      "{name}",
+                      user.fullName ?? es.adminUsers.noName
+                    )}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setNotice(null);
+                      setDeleteTarget(user);
+                    }}
+                  >
+                    <Trash2Icon aria-hidden="true" />
+                  </Button>
+                )}
+              </span>
             );
           }
 
@@ -328,6 +403,45 @@ export function UsersDirectoryPanel({ users }: UsersDirectoryPanelProps) {
               {target.hasMatchingProspect
                 ? es.adminUsers.confirmWithProspect
                 : es.adminUsers.confirmWithoutProspect}
+            </p>
+          </div>
+        ) : null}
+      </FormDialog>
+
+      <FormDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title={es.adminUsers.delete.title}
+        description={es.adminUsers.delete.description}
+        onSubmit={handleDelete}
+        submitLabel={es.adminUsers.delete.confirm}
+        submittingLabel={es.adminUsers.delete.deleting}
+        isSubmitting={isDeleting}
+        error={deleteError}
+      >
+        {deleteTarget ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-ink-900">
+              {es.adminUsers.delete.person
+                .replace("{name}", deleteTarget.fullName ?? es.adminUsers.noName)
+                .replace("{email}", deleteTarget.email)}
+            </p>
+
+            <p className="text-sm text-ink-500">{es.adminUsers.delete.removes}</p>
+
+            {/* The question every admin asks before pressing this. Only shown
+                when it is true, so it never reassures about money that is not
+                there. */}
+            {deleteTarget.isInvestor ? (
+              <p className="rounded-[5px] bg-surface px-3 py-2 text-sm text-ink-700">
+                {es.adminUsers.delete.keepsInvestor}
+              </p>
+            ) : null}
+
+            <p className="text-sm font-medium text-destructive">
+              {es.adminUsers.delete.irreversible}
             </p>
           </div>
         ) : null}

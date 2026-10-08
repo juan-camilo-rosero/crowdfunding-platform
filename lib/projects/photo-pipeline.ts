@@ -46,7 +46,12 @@ export type PipelineDeps = {
     onProgress?: (done: number, total: number) => void
   ) => Promise<DirectUploadResult>;
   attach: (input: { projectId: string; urls: string[] }) => Promise<ProjectPhotosResult>;
-  uploadViaServer: (formData: FormData) => Promise<ProjectPhotosResult>;
+  /**
+   * Second chance through a Server Action when the direct upload fails.
+   * Optional: a screen without one (the login carousel) simply reports the
+   * failure instead of retrying.
+   */
+  uploadViaServer?: (formData: FormData) => Promise<ProjectPhotosResult>;
   removeObjects: (paths: string[]) => Promise<void>;
 };
 
@@ -190,7 +195,10 @@ export async function runPhotoPipeline(
     // small enough to fit its request body; bigger ones would fail again after
     // travelling in full.
     const remaining = prepared.slice(upload.failedIndex);
-    if (remaining.every((item) => item.file.size <= MAX_SERVER_UPLOAD_BYTES)) {
+    if (
+      deps.uploadViaServer &&
+      remaining.every((item) => item.file.size <= MAX_SERVER_UPLOAD_BYTES)
+    ) {
       const formData = new FormData();
       formData.append("projectId", projectId);
       remaining.forEach((item) => formData.append("files", item.file));

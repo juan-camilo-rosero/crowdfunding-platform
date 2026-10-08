@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { fetchLoginSlides } from "@/lib/site/login-slides";
+import { createClient } from "@/lib/supabase/server";
 import { BrandLogo } from "@/components/auth/BrandLogo";
 import { LoginCarousel } from "@/components/auth/LoginCarousel";
 import { cn } from "@/lib/utils";
@@ -24,12 +26,17 @@ export type AuthSplitLayoutProps = {
  * On mobile the carousel is dropped entirely and the form takes the full width,
  * which is the whole responsive difference.
  */
-export function AuthSplitLayout({
+export async function AuthSplitLayout({
   title,
   subtitle,
   children,
   contentClassName,
 }: AuthSplitLayoutProps) {
+  // Read here rather than in each page: the three screens that use this layout
+  // would otherwise have to remember to pass the slides. A failure falls back
+  // to the bundled images, so this never keeps the login from rendering.
+  const slides = await fetchLoginSlides(await createClient());
+
   return (
     <div className="flex min-h-dvh flex-1">
       {/* py-8 and a scrollable column: with the larger logo and two fields the
@@ -68,7 +75,7 @@ export function AuthSplitLayout({
         page's full height or drifting up with the scroll.
       */}
       <aside className="hidden lg:block lg:sticky lg:top-0 lg:h-dvh lg:w-1/2 lg:shrink-0 lg:self-start lg:overflow-hidden">
-        <LoginCarousel />
+        <LoginCarousel slides={slides} />
       </aside>
     </div>
   );

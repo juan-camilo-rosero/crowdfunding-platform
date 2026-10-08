@@ -1,4 +1,5 @@
 import { es } from "@/i18n";
+import { getCurrentUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getUserDirectory, type UsersClient } from "@/lib/users/query";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -19,9 +20,12 @@ import { UsersDirectoryPanel } from "./UsersDirectoryPanel";
  */
 export default async function AdminUsersPage() {
   const supabase = await createClient();
-  const { users, failed } = await getUserDirectory(
-    supabase as unknown as UsersClient
-  );
+  const [{ users, failed }, caller] = await Promise.all([
+    getUserDirectory(supabase as unknown as UsersClient),
+    // Only to hide the delete control on the admin's own row; the Server
+    // Action refuses that case regardless of what the client sends.
+    getCurrentUser(),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,7 +51,7 @@ export default async function AdminUsersPage() {
           </a>
         </div>
       ) : (
-        <UsersDirectoryPanel users={users} />
+        <UsersDirectoryPanel users={users} currentUserId={caller?.id} />
       )}
     </div>
   );

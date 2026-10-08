@@ -22,7 +22,9 @@ function file(name: string, { size = 1 * MB, type = "image/jpeg" } = {}) {
 const urlOf = (name: string) => `${BUCKET}/p-1/${name}`;
 
 /** Deps where everything works; each test breaks the one part it is about. */
-function makeDeps(): PipelineDeps & { [K in keyof PipelineDeps]: ReturnType<typeof vi.fn> } {
+function makeDeps(): Required<PipelineDeps> & {
+  [K in keyof Required<PipelineDeps>]: ReturnType<typeof vi.fn>;
+} {
   return {
     compress: vi.fn(async (input: File) => ({ ok: true, file: input, compressed: false })),
     // Reports progress per file, as the real one does.
@@ -300,5 +302,26 @@ describe("when the project row cannot be updated", () => {
 
     expect(deps.removeObjects).toHaveBeenCalledWith(["p-1/a.jpg"]);
     expect(result).toEqual({ ok: false, error: e.saveFailed, photos: null });
+  });
+});
+
+describe("a screen with no server-side fallback", () => {
+  it("reports the failure instead of retrying", async () => {
+    const { uploadViaServer: _unused, ...withoutFallback } = deps;
+    deps.uploadDirect.mockResolvedValueOnce({
+      ok: false,
+      uploaded: [],
+      failedIndex: 0,
+      reason: "network",
+    });
+
+    const result = await runPhotoPipeline(
+      "login",
+      [file("a.jpg")],
+      withoutFallback as unknown as PipelineDeps
+    );
+
+    expect(!result.ok && result.error).toBe(e.uploadNetwork.replace("{archivo}", "a.jpg"));
+    expect(deps.uploadViaServer).not.toHaveBeenCalled();
   });
 });
