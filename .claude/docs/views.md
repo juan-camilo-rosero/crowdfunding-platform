@@ -122,6 +122,8 @@ CRUD de las tablas base. Además:
 - **usuarios:** vincular/desvincular a alguien como inversionista (crear o conectar su fila en `investors`), ascender o quitar `role = 'admin'` (acción aparte del vínculo), cambiar el estado de la cuenta, corregir el email de vínculo. Las dos capacidades se gestionan por separado: quitar el vínculo no quita el admin, y viceversa.
 - **pipeline:** tabla del embudo de captación — nombre del inversionista, teléfono, monto potencial, etapa, acción "cambiar estado". Las etapas alimentan la métrica de capital potencial por etapa (embudo: contacto, calificado, en reunión, en revisión, firmado, desembolsado).
 - **aprobaciones:** cola de reassignment_requests e investment_interests pendientes.
+- **transacciones:** pestaña del panel sobre `transactions`. Es la que hace que el inversionista vea su monto invertido (las vistas `investor_project_position` / `investor_project_distribution` leen de ahí, no de `capital_contributions`). No ofrece el tipo `reasignación`: esa transacción la genera la aprobación de una solicitud.
+- **borrado de filas:** las pestañas cuyas filas no sostienen a nadie permiten eliminar un registro (transacciones, capital, presupuesto, timeline, reportes, documentos, interés y solicitudes no aprobadas). Proyectos e inversionistas NUNCA: se retiran por su campo de estado. La regla vive en `lib/table/deletable-rows.ts` y la hace cumplir `admin_delete_table_row` en la base.
 - **login (`/admin/login`):** imágenes del carrusel de la pantalla de inicio de sesión — subir, ordenar, ponerles frase y quitarlas. Mientras no haya ninguna configurada, el login usa las cuatro imágenes que vienen con la aplicación.
 
 Las pestañas de admin se OCULTAN por completo para no-admin (no se muestran deshabilitadas).

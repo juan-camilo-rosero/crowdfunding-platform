@@ -14,6 +14,7 @@ import {
   Loader2Icon,
   PencilIcon,
   PlusIcon,
+  Trash2Icon,
 } from "lucide-react";
 import { es } from "@/i18n";
 import {
@@ -23,12 +24,14 @@ import {
   toTableChanges,
   type PendingUpdates,
 } from "@/lib/table/pending-changes";
+import { formatCellValue } from "@/lib/table/format-cell";
 import type { TableChanges, TableColumn, TableRow } from "@/lib/table/types";
 import { Button } from "@/components/ui/button";
 import {
   EditableDataTable,
   type EditableDataTableProps,
 } from "./EditableDataTable";
+import { FormDialog } from "@/components/ui/form-dialog";
 import { RecordFormDialog } from "./RecordFormDialog";
 
 /**
@@ -73,6 +76,15 @@ export type BatchEditPanelProps = {
   createDescription?: string;
   emptyMessage?: string;
   /**
+   * Deletes ONE record. Absent, the screen offers no deletion at all — which
+   * is the case for the tables whose rows other data hangs off.
+   */
+  onDelete?: (rowId: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Per-row veto, for a table where only some rows may go. */
+  canDeleteRow?: (row: TableRow) => boolean;
+  /** One line saying what this table's deletion affects. */
+  deleteWarning?: string;
+  /**
    * Persists a batch. Injected so each screen can adapt the payload before
    * sending it, while the buffer → debounce → save → retry flow stays here.
    */
@@ -108,6 +120,9 @@ export function BatchEditPanel({
   createTitle,
   createDescription,
   emptyMessage,
+  onDelete,
+  canDeleteRow,
+  deleteWarning,
   onSave,
 }: BatchEditPanelProps) {
   const router = useRouter();
@@ -151,6 +166,10 @@ export function BatchEditPanel({
    * after a save that succeeded.
    */
   const [revision, setRevision] = useState(0);
+  /** The row whose deletion is being confirmed, with its position on screen. */
+  const [deleting, setDeleting] = useState<{ row: TableRow; index: number } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const flush = useCallback(async (): Promise<void> => {
     if (timerRef.current) {
@@ -282,7 +301,7 @@ export function BatchEditPanel({
    */
   const rowActions: EditableDataTableProps["rowAction"] = {
     label: es.admin.actionsColumn,
-    width: (rowAction?.width ?? 0) + 120,
+    width: (rowAction?.width ?? 0) + (onDelete ? 160 : 120),
     render: (row) => (
       <div className="flex items-center gap-2">
         {/* Same rule as the cells: no id, no way to address the record. */}
@@ -298,6 +317,27 @@ export function BatchEditPanel({
           </Button>
         ) : null}
         {rowAction?.render(row)}
+
+        {/* Destructive and last, so it is never the first thing under the
+            pointer. Absent when the screen or the row forbids it. */}
+        {onDelete && row.id && (canDeleteRow?.(row) ?? true) ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-ink-400 hover:bg-destructive/10 hover:text-destructive"
+            aria-label={es.admin.delete.open.replace(
+              "{n}",
+              String(rows.indexOf(row) + 1)
+            )}
+            onClick={() => {
+              setDeleteError(null);
+              setDeleting({ row, index: rows.indexOf(row) });
+            }}
+          >
+            <Trash2Icon aria-hidden="true" />
+          </Button>
+        ) : null}
       </div>
     ),
   };
@@ -322,6 +362,33 @@ export function BatchEditPanel({
       routerRef.current.refresh();
     }
     return result;
+  }
+
+  async function confirmDelete() {
+    if (!deleting || !onDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      // Anything typed into the grid goes first: the refresh that follows the
+      // deletion would otherwise arrive before it.
+      await flush();
+
+      const result = await onDelete(String(deleting.row.id));
+      if (!result.ok) {
+        setDeleteError(result.error ?? es.admin.delete.failed);
+        return;
+      }
+
+      setDeleting(null);
+      setStatus("saved");
+      setRevision((current) => current + 1);
+      routerRef.current.refresh();
+    } catch {
+      setDeleteError(es.admin.delete.failed);
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const createButton = allowInsert ? (
@@ -416,6 +483,33 @@ export function BatchEditPanel({
         />
       ) : null}
 
+      {deleting ? (
+        <FormDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeleting(null);
+          }}
+          title={es.admin.delete.title}
+          description={es.admin.delete.description}
+          onSubmit={confirmDelete}
+          submitLabel={es.admin.delete.confirm}
+          submittingLabel={es.admin.delete.deleting}
+          isSubmitting={isDeleting}
+          error={deleteError}
+        >
+          <div className="flex flex-col gap-2">
+            {/* What the record IS, read from its own first columns, so the
+                admin can tell it apart from its neighbours. */}
+            <p className="text-sm font-medium text-ink-900">
+              {describeRow(deleting.row, columns)}
+            </p>
+            {deleteWarning ? (
+              <p className="text-sm text-ink-500">{deleteWarning}</p>
+            ) : null}
+          </div>
+        </FormDialog>
+      ) : null}
+
       {isCreating ? (
         <RecordFormDialog
           // A fresh form every time it opens.
@@ -453,4 +547,21 @@ function FilterSlot({
   createButton: ReactNode;
 }) {
   return <>{render({ guard, createButton })}</>;
+}
+
+/**
+ * A one-line description of a record, built from its first filled columns.
+ *
+ * The confirmation has to name what is about to disappear, and these tables
+ * have no "name" field to rely on — a transaction is a date, a project and an
+ * amount. Three values are enough to recognise the row that was clicked.
+ */
+function describeRow(row: TableRow, columns: TableColumn[]): string {
+  return (
+    columns
+      .map((column) => formatCellValue(row[column.key], column.type))
+      .filter((text) => text !== "")
+      .slice(0, 3)
+      .join(" · ") || es.admin.delete.title
+  );
 }

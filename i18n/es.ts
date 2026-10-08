@@ -1130,6 +1130,39 @@ export const es = {
     // {campo} se reemplaza con el nombre de la columna.
     editCell: "Editar {campo}",
 
+    // Borrado de filas en las tablas del panel.
+    delete: {
+      // {n} es el número de fila.
+      open: "Eliminar el registro {n}",
+      title: "Eliminar registro",
+      description:
+        "Se elimina solo este registro. No se puede deshacer.",
+      confirm: "Eliminar registro",
+      deleting: "Eliminando…",
+      success: "Registro eliminado",
+      // Avisos de lo que el borrado arrastra, según la tabla.
+      warnings: {
+        transactions:
+          "Las cifras del portal del inversionista (total invertido, rendimientos) se recalculan sin este movimiento.",
+        capital_contributions:
+          "El capital recibido del proyecto se recalcula sin este aporte. Si hay un contrato en firma asociado, queda sin enlace, no se borra.",
+        documents:
+          "El inversionista deja de ver este documento. El archivo en sí no se borra del almacenamiento.",
+        monthly_reports: "El inversionista deja de ver este reporte.",
+        budget_items: "El presupuesto ejecutado del proyecto se recalcula sin esta línea.",
+        tasks: "Desaparece del cronograma del proyecto.",
+        investment_interests: "Se pierde el registro de ese contacto.",
+        reassignment_requests: "Solo se pueden eliminar las solicitudes que no fueron aprobadas.",
+      } as Record<string, string>,
+      // Motivos por los que un borrado se rechaza.
+      tableNotAllowed:
+        "Esta tabla no permite eliminar registros desde el panel: otros datos dependen de ellos.",
+      approvedRequest:
+        "No se puede eliminar una solicitud aprobada: su capital ya se movió y su transacción ya existe.",
+      noId: "Ese registro todavía no está guardado.",
+      failed: "No pudimos eliminar el registro. Inténtalo de nuevo.",
+    },
+
     // Autoguardado: cada celda se guarda sola, sin botón de por medio.
     autosaveHint: "Los cambios se guardan automáticamente.",
     autosaveSaved: "Todos los cambios están guardados",

@@ -15,7 +15,10 @@ import {
   type TableTab,
 } from "@/components/data-table/TableTabsSelector";
 import { ProjectPhotosDialog } from "@/components/project/ProjectPhotosDialog";
+import { es as strings } from "@/i18n";
+import { isDeletableTable, whyRowCannotBeDeleted } from "@/lib/table/deletable-rows";
 import { saveTableChanges } from "./actions";
+import { deleteTableRow } from "./delete-actions";
 
 /** The one tab whose records carry photos. */
 const PROJECTS_TAB_ID = "proyectos";
@@ -27,6 +30,8 @@ export type AdminTablesPanelProps = {
   tableLabel: string;
   columns: TableColumn[];
   rows: TableRow[];
+  /** Table this tab writes to, used to decide whether rows may be deleted. */
+  source: string;
   /** Active filters, already validated on the server. */
   filters: TableFilters;
   countLabel: string;
@@ -46,6 +51,7 @@ export function AdminTablesPanel({
   tableLabel,
   columns,
   rows,
+  source,
   filters,
   countLabel,
   allowInsert,
@@ -77,6 +83,15 @@ export function AdminTablesPanel({
             : es.admin.emptyTable
         }
         onSave={(changes: TableChanges) => saveTableChanges(activeTabId, changes)}
+        // Only the tables whose rows nothing else hangs off; see
+        // lib/table/deletable-rows.ts for where that line is drawn.
+        onDelete={
+          isDeletableTable(source)
+            ? (rowId) => deleteTableRow(activeTabId, rowId)
+            : undefined
+        }
+        canDeleteRow={(row) => whyRowCannotBeDeleted(source, row) === null}
+        deleteWarning={strings.admin.delete.warnings[source]}
         // Photos are a text[] of files, which the scalar batch save cannot carry;
         // this column opens a manager that commits on its own.
         rowAction={

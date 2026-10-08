@@ -1202,6 +1202,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_delete_table_row: {
+        Args: { p_id: string; p_table: string }
+        Returns: Json
+      }
       admin_save_table_changes: {
         Args: { p_inserts?: Json; p_table: string; p_updates?: Json }
         Returns: Json

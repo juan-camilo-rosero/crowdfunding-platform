@@ -135,6 +135,18 @@ Sobre cada tabla hay filtros por sus campos de lista (estado, ciudad, proyecto, 
 
 Los filtros quedan en la dirección del navegador, así que puedes guardar la vista en favoritos o compartirla.
 
+### Eliminar un registro
+
+Las filas de la mayoría de las tablas tienen una papelera a la derecha. Antes de borrar, la ventana muestra el registro (por ejemplo "27 mar 2026 · Villa Rotonda 118 · $45,000") y dice qué se recalcula al quitarlo.
+
+**Se puede eliminar** en: Transacciones, Capital y financiamiento, Presupuesto, Timeline, Reportes, Documentos, Interés de inversión y Solicitudes (solo las que no fueron aprobadas).
+
+**No se puede eliminar** en Proyectos ni Inversionistas, y es a propósito: borrar un proyecto se llevaría por delante su presupuesto, sus tareas, sus reportes y los intereses recibidos; borrar un inversionista, sus tickets y sus firmas — y la base lo impide de todas formas cuando tiene dinero asociado. Para retirar cualquiera de los dos, usa su campo de **estado** (por ejemplo, proyecto "pausado").
+
+Tampoco se puede eliminar una **solicitud aprobada**: su capital ya se movió y su transacción ya existe; borrarla devolvería dinero sin dejar rastro.
+
+Dos detalles: al eliminar un documento, el archivo no se borra del almacenamiento, solo deja de estar listado; y si tenías cambios sin guardar en la tabla, se guardan antes de eliminar.
+
 ### Campos que no se pueden editar
 
 Algunos aparecen bloqueados a propósito:

@@ -369,3 +369,104 @@ describe("creating a record", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("deleting a row", () => {
+  const d = es.admin.delete;
+
+  it("offers no bin when the screen does not allow deleting", () => {
+    renderPanel(vi.fn());
+
+    expect(
+      screen.queryByRole("button", { name: d.open.replace("{n}", "1") })
+    ).not.toBeInTheDocument();
+  });
+
+  it("asks before deleting, and says what the deletion affects", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn().mockResolvedValue({ ok: true });
+    renderPanel(vi.fn(), { onDelete, deleteWarning: "Las cifras se recalculan." });
+
+    await user.click(screen.getByRole("button", { name: d.open.replace("{n}", "1") }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Las cifras se recalculan.")).toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it("deletes the row it was opened from", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn().mockResolvedValue({ ok: true });
+    renderPanel(vi.fn(), { onDelete });
+
+    await user.click(screen.getByRole("button", { name: d.open.replace("{n}", "2") }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith("row-2"));
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it("saves pending edits before deleting, so nothing in flight is lost", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue({ ok: true });
+    const onDelete = vi.fn().mockResolvedValue({ ok: true });
+    renderPanel(onSave, { onDelete });
+
+    await editCell(user, "Villa Rotonda", "Villa Norte");
+    await user.click(screen.getByRole("button", { name: d.open.replace("{n}", "2") }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    await waitFor(() => expect(onDelete).toHaveBeenCalled());
+    expect(onSave).toHaveBeenCalledWith({
+      updates: [{ id: "row-1", values: { name: "Villa Norte" } }],
+      inserts: [],
+    });
+    expect(onSave.mock.invocationCallOrder[0]).toBeLessThan(
+      onDelete.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("keeps the dialog open with the reason when the server refuses", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi
+      .fn()
+      .mockResolvedValue({ ok: false, error: d.approvedRequest });
+    renderPanel(vi.fn(), { onDelete });
+
+    await user.click(screen.getByRole("button", { name: d.open.replace("{n}", "1") }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(d.approvedRequest);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("does not freeze when the action rejects", async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn().mockRejectedValue(new Error("network"));
+    renderPanel(vi.fn(), { onDelete });
+
+    await user.click(screen.getByRole("button", { name: d.open.replace("{n}", "1") }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: d.confirm }));
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(d.failed);
+  });
+
+  it("hides the bin on rows that may not be deleted", () => {
+    const onDelete = vi.fn();
+    renderPanel(vi.fn(), {
+      onDelete,
+      // The screen decides per row: an approved request keeps no bin.
+      canDeleteRow: (row: TableRow) => row.id !== "row-1",
+    });
+
+    expect(
+      screen.queryByRole("button", { name: d.open.replace("{n}", "1") })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: d.open.replace("{n}", "2") })
+    ).toBeInTheDocument();
+  });
+});

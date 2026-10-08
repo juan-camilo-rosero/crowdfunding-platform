@@ -93,6 +93,7 @@ export default async function AdminHomePage({
         tableLabel={definition.label}
         columns={definition.columns}
         rows={rows}
+        source={definition.source}
         filters={filters}
         countLabel={countLabel}
         allowInsert={definition.allowInsert !== false}
